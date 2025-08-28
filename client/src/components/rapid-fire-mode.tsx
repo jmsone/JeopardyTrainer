@@ -8,10 +8,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { QuestionWithCategory } from "@shared/schema";
 
 interface RapidFireModeProps {
+  settings?: { selectedCategories: string[]; questionCount: number };
   onBack: () => void;
 }
 
-export default function RapidFireMode({ onBack }: RapidFireModeProps) {
+export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [sessionStats, setSessionStats] = useState({
@@ -21,7 +22,20 @@ export default function RapidFireMode({ onBack }: RapidFireModeProps) {
   });
 
   const { data: questions, isLoading } = useQuery<QuestionWithCategory[]>({
-    queryKey: ["/api/questions/rapid-fire"],
+    queryKey: ["/api/questions/rapid-fire", settings],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (settings?.questionCount) {
+        params.append('limit', settings.questionCount.toString());
+      }
+      if (settings?.selectedCategories && settings.selectedCategories.length > 0) {
+        params.append('categories', settings.selectedCategories.join(','));
+      }
+      
+      const response = await fetch(`/api/questions/rapid-fire?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch questions');
+      return response.json();
+    },
   });
 
   const submitAnswerMutation = useMutation({

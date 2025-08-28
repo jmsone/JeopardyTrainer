@@ -39,10 +39,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/questions/rapid-fire", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const questions = await storage.getRapidFireQuestions(limit);
+      const categories = req.query.categories ? (req.query.categories as string).split(',') : undefined;
+      const questions = await storage.getRapidFireQuestions(limit, categories);
       res.json(questions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch rapid-fire questions" });
+    }
+  });
+
+  // Get answered questions
+  app.get("/api/answered-questions", async (req, res) => {
+    try {
+      const answeredQuestions = await storage.getAnsweredQuestions();
+      res.json(answeredQuestions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch answered questions" });
     }
   });
 

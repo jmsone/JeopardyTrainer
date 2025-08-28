@@ -2,13 +2,14 @@ import { useState } from "react";
 import GameBoard from "@/components/game-board";
 import QuestionView from "@/components/question-view";
 import RapidFireMode from "@/components/rapid-fire-mode";
+import RapidFireSettings from "@/components/rapid-fire-settings";
 import StatsDashboard from "@/components/stats-dashboard";
 import BottomNavigation from "@/components/bottom-navigation";
 import FeedbackModal from "@/components/feedback-modal";
 import { Trophy, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-type Screen = "game" | "question" | "rapid-fire" | "stats" | "profile";
+type Screen = "game" | "question" | "rapid-fire" | "rapid-fire-settings" | "stats" | "profile";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("game");
@@ -19,6 +20,10 @@ export default function Home() {
     answer: string;
     value: number;
   } | null>(null);
+  const [rapidFireSettings, setRapidFireSettings] = useState<{
+    selectedCategories: string[];
+    questionCount: number;
+  } | undefined>();
 
   const { data: overallStats } = useQuery({
     queryKey: ["/api/stats/overall"],
@@ -30,6 +35,11 @@ export default function Home() {
   };
 
   const handleRapidFire = () => {
+    setCurrentScreen("rapid-fire-settings");
+  };
+
+  const handleRapidFireStart = (settings: { selectedCategories: string[]; questionCount: number }) => {
+    setRapidFireSettings(settings);
     setCurrentScreen("rapid-fire");
   };
 
@@ -56,8 +66,10 @@ export default function Home() {
             onBack={() => setCurrentScreen("game")}
           />
         ) : null;
+      case "rapid-fire-settings":
+        return <RapidFireSettings onStart={handleRapidFireStart} onBack={() => setCurrentScreen("game")} />;
       case "rapid-fire":
-        return <RapidFireMode onBack={() => setCurrentScreen("game")} />;
+        return <RapidFireMode settings={rapidFireSettings} onBack={() => setCurrentScreen("game")} />;
       case "stats":
         return <StatsDashboard />;
       default:

@@ -25,7 +25,8 @@ export interface IStorage {
   getQuestion(id: string): Promise<QuestionWithCategory | undefined>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   getQuestionByValue(categoryId: string, value: number): Promise<QuestionWithCategory | undefined>;
-  getRapidFireQuestions(limit?: number): Promise<QuestionWithCategory[]>;
+  getRapidFireQuestions(limit?: number, categoryIds?: string[]): Promise<QuestionWithCategory[]>;
+  getAnsweredQuestions(): Promise<string[]>;
   
   // User Progress
   getUserProgress(): Promise<UserProgress[]>;
@@ -179,8 +180,14 @@ export class MemStorage implements IStorage {
     return { ...question, category };
   }
 
-  async getRapidFireQuestions(limit: number = 10): Promise<QuestionWithCategory[]> {
-    const allQuestions = Array.from(this.questions.values());
+  async getRapidFireQuestions(limit: number = 10, categoryIds?: string[]): Promise<QuestionWithCategory[]> {
+    let allQuestions = Array.from(this.questions.values());
+    
+    // Filter by categories if specified
+    if (categoryIds && categoryIds.length > 0) {
+      allQuestions = allQuestions.filter(q => categoryIds.includes(q.categoryId));
+    }
+    
     const shuffled = allQuestions.sort(() => Math.random() - 0.5);
     const questionsWithCategories: QuestionWithCategory[] = [];
     
@@ -202,6 +209,10 @@ export class MemStorage implements IStorage {
     if (!category) return undefined;
     
     return { ...question, category };
+  }
+
+  async getAnsweredQuestions(): Promise<string[]> {
+    return Array.from(this.userProgress.values()).map(p => p.questionId);
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {

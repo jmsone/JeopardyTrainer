@@ -30,11 +30,21 @@ A mobile-optimized web application for Jeopardy training featuring spaced repeti
 - Category frequency weighting for 2025 relevance
 
 ## Recent Changes
-- Project initialized (2025-08-28)
-- Research phase for authentic data sources
+- Project initialized with classic Jeopardy board layout (2025-08-28)
+- Implemented self-assessment system for main board and rapid-fire mode
+- Added visual indicators for completed questions on game board
+- Created category selection for rapid-fire mode with customizable question counts
+- Removed problematic text input validation in favor of reveal+assess approach
+- Enhanced mobile-responsive design with authentic Jeopardy styling
+
+## User Preferences
+- Prefers self-assessment over exact text matching for answers
+- Values visual feedback for question completion status
+- Wants category selection options for focused practice
+- Emphasizes knowledge retention over perfect spelling/formatting
 
 ## Next Steps
-1. Identify and integrate authentic Jeopardy data source
-2. Design spaced repetition algorithm
-3. Build question delivery and tracking system
-4. Implement performance analytics
+1. Integrate authentic Jeopardy data source (jService.io API)
+2. Enhance spaced repetition algorithm with performance tracking
+3. Add advanced analytics and progress visualization
+4. Implement user authentication and data persistence

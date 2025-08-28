@@ -22,6 +22,10 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
     queryKey: ["/api/stats/overall"],
   });
 
+  const { data: answeredQuestions = [] } = useQuery<string[]>({
+    queryKey: ["/api/answered-questions"],
+  });
+
   const values = [200, 400, 600, 800, 1000];
 
   return (
@@ -74,6 +78,7 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
                   categoryId={category.id}
                   value={value}
                   onSelect={onQuestionSelect}
+                  answeredQuestions={answeredQuestions}
                 />
               ))
             ))}
@@ -117,15 +122,17 @@ interface QuestionButtonProps {
   categoryId: string;
   value: number;
   onSelect: (questionId: string) => void;
+  answeredQuestions: string[];
 }
 
-function QuestionButton({ categoryId, value, onSelect }: QuestionButtonProps) {
+function QuestionButton({ categoryId, value, onSelect, answeredQuestions }: QuestionButtonProps) {
   const { data: question } = useQuery<QuestionWithCategory>({
     queryKey: [`/api/questions?categoryId=${categoryId}&value=${value}`],
     enabled: !!categoryId,
   });
 
   const isAvailable = !!question;
+  const isAnswered = question && answeredQuestions.includes(question.id);
 
   const handleClick = () => {
     if (question) {
@@ -133,20 +140,30 @@ function QuestionButton({ categoryId, value, onSelect }: QuestionButtonProps) {
     }
   };
 
+  const getButtonStyle = () => {
+    if (!isAvailable) {
+      return 'bg-muted text-muted-foreground cursor-not-allowed';
+    }
+    if (isAnswered) {
+      return 'bg-green-600 text-white opacity-75 border-2 border-green-400';
+    }
+    return 'gold-gradient text-black hover:opacity-90';
+  };
+
   return (
     <Button
       onClick={handleClick}
       disabled={!isAvailable}
       className={`
-        ripple font-bold text-lg transition-colors min-h-[60px] flex items-center justify-center
-        ${isAvailable 
-          ? 'gold-gradient text-black hover:opacity-90' 
-          : 'bg-muted text-muted-foreground cursor-not-allowed'
-        }
+        ripple font-bold text-lg transition-colors min-h-[60px] flex items-center justify-center relative
+        ${getButtonStyle()}
       `}
-      data-testid={`button-question-${categoryId}-${value}${!isAvailable ? '-disabled' : ''}`}
+      data-testid={`button-question-${categoryId}-${value}${!isAvailable ? '-disabled' : isAnswered ? '-answered' : ''}`}
     >
       ${value}
+      {isAnswered && (
+        <span className="absolute top-1 right-1 text-xs">✓</span>
+      )}
     </Button>
   );
 }
