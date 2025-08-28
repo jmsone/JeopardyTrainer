@@ -16,6 +16,8 @@ export const questions = pgTable("questions", {
   answer: text("answer").notNull(),
   value: integer("value").notNull(), // Dollar value ($200, $400, etc.)
   difficulty: integer("difficulty").notNull().default(1), // 1-5 scale
+  airDate: text("air_date"), // When the question originally aired on Jeopardy
+  jServiceId: integer("j_service_id"), // Original ID from jService API
 });
 
 export const userProgress = pgTable("user_progress", {

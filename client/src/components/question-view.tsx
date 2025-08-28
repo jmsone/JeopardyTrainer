@@ -109,6 +109,11 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
         <div className="text-2xl font-bold text-primary" data-testid="text-value">
           ${question.value}
         </div>
+        {question.airDate && (
+          <div className="text-xs text-muted-foreground mt-1" data-testid="text-air-date">
+            Originally aired: {new Date(question.airDate).toLocaleDateString()}
+          </div>
+        )}
       </div>
 
       {/* Question Card */}

@@ -165,6 +165,11 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
         <div className="text-center">
           <div className="text-sm text-primary-foreground/80 mb-2" data-testid="text-category">
             {currentQuestion?.category.name} • ${currentQuestion?.value}
+            {currentQuestion?.airDate && (
+              <span className="block text-xs opacity-75 mt-1">
+                Aired: {new Date(currentQuestion.airDate).toLocaleDateString()}
+              </span>
+            )}
           </div>
           <p className="text-lg leading-relaxed mb-4 text-primary-foreground" data-testid="text-question">
             {currentQuestion?.text}

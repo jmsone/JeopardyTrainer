@@ -42,6 +42,8 @@ A mobile-optimized web application for Jeopardy training featuring spaced repeti
 - Values visual feedback for question completion status
 - Wants category selection options for focused practice
 - Emphasizes knowledge retention over perfect spelling/formatting
+- Requires authentic, current Jeopardy data with proper time context
+- Requests air date information for questions that may become outdated
 
 ## Next Steps
 1. Integrate authentic Jeopardy data source (jService.io API)

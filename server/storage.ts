@@ -115,7 +115,7 @@ export class MemStorage implements IStorage {
         { text: "This tennis tournament is played on grass courts in London each summer.", answer: "What is Wimbledon?", value: 400, difficulty: 2 },
         { text: "This boxer was known as 'The Greatest' and 'The Louisville Lip'.", answer: "Who is Muhammad Ali?", value: 600, difficulty: 3 },
         { text: "This golfer has won the most major championships in history with 18 titles.", answer: "Who is Jack Nicklaus?", value: 800, difficulty: 4 },
-        { text: "This baseball player holds the record for most career home runs with 755.", answer: "Who is Hank Aaron?", value: 1000, difficulty: 5 },
+        { text: "This Olympic sport combines swimming, cycling, and running in succession.", answer: "What is triathlon?", value: 1000, difficulty: 5 },
       ],
       "Entertainment": [
         { text: "This director created the 'Star Wars' saga.", answer: "Who is George Lucas?", value: 200, difficulty: 1 },
