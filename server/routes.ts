@@ -18,9 +18,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Questions
   app.get("/api/questions", async (req, res) => {
     try {
-      const { categoryId } = req.query;
+      const { categoryId, value } = req.query;
       
-      if (categoryId) {
+      if (categoryId && value) {
+        const question = await storage.getQuestionByValue(categoryId as string, parseInt(value as string));
+        res.json(question);
+      } else if (categoryId) {
         const questions = await storage.getQuestionsByCategory(categoryId as string);
         res.json(questions);
       } else {
@@ -29,6 +32,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch questions" });
+    }
+  });
+
+  // Rapid-fire mode
+  app.get("/api/questions/rapid-fire", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const questions = await storage.getRapidFireQuestions(limit);
+      res.json(questions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch rapid-fire questions" });
     }
   });
 

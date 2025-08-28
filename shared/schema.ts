@@ -24,6 +24,7 @@ export const userProgress = pgTable("user_progress", {
   correct: boolean("correct").notNull(),
   userAnswer: text("user_answer"),
   timeSpent: integer("time_spent"), // in seconds
+  selfAssessment: varchar("self_assessment", { enum: ["correct", "incorrect", "unsure"] }).notNull().default("unsure"),
   answeredAt: timestamp("answered_at").notNull().defaultNow(),
 });
 
@@ -48,6 +49,8 @@ export const insertQuestionSchema = createInsertSchema(questions).omit({
 export const insertUserProgressSchema = createInsertSchema(userProgress).omit({
   id: true,
   answeredAt: true,
+}).extend({
+  selfAssessment: z.enum(["correct", "incorrect", "unsure"]).optional(),
 });
 
 export const insertSpacedRepetitionSchema = createInsertSchema(spacedRepetition).omit({

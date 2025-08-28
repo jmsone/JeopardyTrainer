@@ -1,13 +1,14 @@
 import { useState } from "react";
 import GameBoard from "@/components/game-board";
 import QuestionView from "@/components/question-view";
+import RapidFireMode from "@/components/rapid-fire-mode";
 import StatsDashboard from "@/components/stats-dashboard";
 import BottomNavigation from "@/components/bottom-navigation";
 import FeedbackModal from "@/components/feedback-modal";
 import { Trophy, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-type Screen = "game" | "question" | "stats" | "profile";
+type Screen = "game" | "question" | "rapid-fire" | "stats" | "profile";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("game");
@@ -28,6 +29,10 @@ export default function Home() {
     setCurrentScreen("question");
   };
 
+  const handleRapidFire = () => {
+    setCurrentScreen("rapid-fire");
+  };
+
   const handleAnswerSubmit = (correct: boolean, answer: string, value: number) => {
     setFeedbackData({ correct, answer, value });
     setShowFeedback(true);
@@ -42,7 +47,7 @@ export default function Home() {
   const renderScreen = () => {
     switch (currentScreen) {
       case "game":
-        return <GameBoard onQuestionSelect={handleQuestionSelect} />;
+        return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} />;
       case "question":
         return selectedQuestion ? (
           <QuestionView 
@@ -51,10 +56,12 @@ export default function Home() {
             onBack={() => setCurrentScreen("game")}
           />
         ) : null;
+      case "rapid-fire":
+        return <RapidFireMode onBack={() => setCurrentScreen("game")} />;
       case "stats":
         return <StatsDashboard />;
       default:
-        return <GameBoard onQuestionSelect={handleQuestionSelect} />;
+        return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} />;
     }
   };
 
