@@ -26,7 +26,7 @@ export interface IStorage {
   createQuestion(question: InsertQuestion): Promise<Question>;
   getQuestionByValue(categoryId: string, value: number): Promise<QuestionWithCategory | undefined>;
   getRapidFireQuestions(limit?: number, categoryIds?: string[]): Promise<QuestionWithCategory[]>;
-  getAnsweredQuestions(): Promise<string[]>;
+  getAnsweredQuestions(): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>;
   
   // User Progress
   getUserProgress(): Promise<UserProgress[]>;
@@ -211,8 +211,11 @@ export class MemStorage implements IStorage {
     return { ...question, category };
   }
 
-  async getAnsweredQuestions(): Promise<string[]> {
-    return Array.from(this.userProgress.values()).map(p => p.questionId);
+  async getAnsweredQuestions(): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]> {
+    return Array.from(this.userProgress.values()).map(p => ({ 
+      questionId: p.questionId, 
+      assessment: p.selfAssessment as "correct" | "incorrect" | "unsure"
+    }));
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {

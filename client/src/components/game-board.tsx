@@ -22,7 +22,7 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
     queryKey: ["/api/stats/overall"],
   });
 
-  const { data: answeredQuestions = [] } = useQuery<string[]>({
+  const { data: answeredQuestions = [] } = useQuery<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>({
     queryKey: ["/api/answered-questions"],
   });
 
@@ -122,7 +122,7 @@ interface QuestionButtonProps {
   categoryId: string;
   value: number;
   onSelect: (questionId: string) => void;
-  answeredQuestions: string[];
+  answeredQuestions: { questionId: string; assessment: "correct" | "incorrect" | "unsure" }[];
 }
 
 function QuestionButton({ categoryId, value, onSelect, answeredQuestions }: QuestionButtonProps) {
@@ -132,7 +132,8 @@ function QuestionButton({ categoryId, value, onSelect, answeredQuestions }: Ques
   });
 
   const isAvailable = !!question;
-  const isAnswered = question && answeredQuestions.includes(question.id);
+  const answeredData = question && answeredQuestions.find(aq => aq.questionId === question.id);
+  const isAnswered = !!answeredData;
 
   const handleClick = () => {
     if (question) {
@@ -144,10 +145,31 @@ function QuestionButton({ categoryId, value, onSelect, answeredQuestions }: Ques
     if (!isAvailable) {
       return 'bg-muted text-muted-foreground cursor-not-allowed';
     }
-    if (isAnswered) {
-      return 'bg-green-600 text-white opacity-75 border-2 border-green-400';
+    if (isAnswered && answeredData) {
+      switch (answeredData.assessment) {
+        case 'correct':
+          return 'bg-green-600 text-white opacity-85 border-2 border-green-400';
+        case 'incorrect':
+          return 'bg-red-600 text-white opacity-85 border-2 border-red-400';
+        case 'unsure':
+          return 'bg-orange-500 text-white opacity-85 border-2 border-orange-400';
+      }
     }
     return 'gold-gradient text-black hover:opacity-90';
+  };
+
+  const getAssessmentIcon = () => {
+    if (!isAnswered || !answeredData) return null;
+    switch (answeredData.assessment) {
+      case 'correct':
+        return '✓';
+      case 'incorrect':
+        return '✗';
+      case 'unsure':
+        return '?';
+      default:
+        return null;
+    }
   };
 
   return (
@@ -162,7 +184,9 @@ function QuestionButton({ categoryId, value, onSelect, answeredQuestions }: Ques
     >
       ${value}
       {isAnswered && (
-        <span className="absolute top-1 right-1 text-xs">✓</span>
+        <span className="absolute top-1 right-1 text-sm font-bold">
+          {getAssessmentIcon()}
+        </span>
       )}
     </Button>
   );

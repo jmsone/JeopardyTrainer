@@ -42,6 +42,7 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/answered-questions"] });
     },
   });
 

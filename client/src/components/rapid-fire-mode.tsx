@@ -50,6 +50,7 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/answered-questions"] });
     },
   });
 
