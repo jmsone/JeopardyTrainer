@@ -21,6 +21,13 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
     unsure: 0,
   });
 
+  const restartSession = () => {
+    setCurrentQuestionIndex(0);
+    setShowAnswer(false);
+    setSessionStats({ correct: 0, incorrect: 0, unsure: 0 });
+    queryClient.invalidateQueries({ queryKey: ["/api/questions/rapid-fire", settings] });
+  };
+
   const { data: questions, isLoading } = useQuery<QuestionWithCategory[]>({
     queryKey: ["/api/questions/rapid-fire", settings],
     queryFn: async () => {
@@ -81,9 +88,8 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
       setCurrentQuestionIndex(prev => prev + 1);
       setShowAnswer(false);
     } else {
-      // Session complete
-      alert(`Session Complete!\nCorrect: ${sessionStats.correct + (assessment === 'correct' ? 1 : 0)}\nIncorrect: ${sessionStats.incorrect + (assessment === 'incorrect' ? 1 : 0)}\nUnsure: ${sessionStats.unsure + (assessment === 'unsure' ? 1 : 0)}`);
-      onBack();
+      // Session complete - increment to trigger completion UI
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
@@ -101,6 +107,48 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
         <div className="text-center">
           <p className="mb-4">No questions available for rapid-fire mode.</p>
           <Button onClick={onBack}>Back to Game Board</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if session is complete
+  if (currentQuestionIndex >= totalQuestions) {
+    const accuracy = totalQuestions > 0 ? (sessionStats.correct / totalQuestions) * 100 : 0;
+    
+    return (
+      <div className="p-4 flex items-center justify-center min-h-[400px]">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold mb-4">Session Complete! 🎉</h2>
+          <div className="mb-6">
+            <p className="text-lg mb-2">Final Score:</p>
+            <div className="text-3xl font-bold mb-4">
+              {accuracy.toFixed(0)}% Accuracy
+            </div>
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{sessionStats.correct}</div>
+                <div className="text-sm text-muted-foreground">Correct</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{sessionStats.incorrect}</div>
+                <div className="text-sm text-muted-foreground">Incorrect</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-500">{sessionStats.unsure}</div>
+                <div className="text-sm text-muted-foreground">Unsure</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={restartSession} className="flex-1" data-testid="button-restart-session">
+              <RotateCcw className="mr-2" size={16} />
+              Play Again
+            </Button>
+            <Button onClick={onBack} variant="outline" className="flex-1">
+              Back to Board
+            </Button>
+          </div>
         </div>
       </div>
     );

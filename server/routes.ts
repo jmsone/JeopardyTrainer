@@ -57,6 +57,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset game board with new questions
+  app.post("/api/reset-board", async (req, res) => {
+    try {
+      await storage.resetGameBoard();
+      res.json({ message: "Game board reset successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reset game board" });
+    }
+  });
+
+  // Clear all progress
+  app.post("/api/clear-progress", async (req, res) => {
+    try {
+      await storage.clearProgress();
+      res.json({ message: "Progress cleared successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to clear progress" });
+    }
+  });
+
   app.get("/api/questions/:id", async (req, res) => {
     try {
       const question = await storage.getQuestion(req.params.id);

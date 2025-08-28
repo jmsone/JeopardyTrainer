@@ -32,10 +32,13 @@ A mobile-optimized web application for Jeopardy training featuring spaced repeti
 ## Recent Changes
 - Project initialized with classic Jeopardy board layout (2025-08-28)
 - Implemented self-assessment system for main board and rapid-fire mode
-- Added visual indicators for completed questions on game board
+- Added visual indicators for completed questions on game board (color-coded: green ✓, red ✗, orange ?)
 - Created category selection for rapid-fire mode with customizable question counts
 - Removed problematic text input validation in favor of reveal+assess approach
 - Enhanced mobile-responsive design with authentic Jeopardy styling
+- Added reset functionality for completed game boards and rapid-fire sessions
+- Fixed outdated questions and added air date display for time context
+- Integrated jService API foundation for authentic Jeopardy data
 
 ## User Preferences
 - Prefers self-assessment over exact text matching for answers

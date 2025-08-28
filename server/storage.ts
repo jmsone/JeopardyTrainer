@@ -27,6 +27,8 @@ export interface IStorage {
   getQuestionByValue(categoryId: string, value: number): Promise<QuestionWithCategory | undefined>;
   getRapidFireQuestions(limit?: number, categoryIds?: string[]): Promise<QuestionWithCategory[]>;
   getAnsweredQuestions(): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>;
+  clearProgress(): Promise<void>;
+  resetGameBoard(): Promise<void>;
   
   // User Progress
   getUserProgress(): Promise<UserProgress[]>;
@@ -216,6 +218,23 @@ export class MemStorage implements IStorage {
       questionId: p.questionId, 
       assessment: p.selfAssessment as "correct" | "incorrect" | "unsure"
     }));
+  }
+
+  async clearProgress(): Promise<void> {
+    this.userProgress.clear();
+    this.spacedRepetition.clear();
+  }
+
+  async resetGameBoard(): Promise<void> {
+    // Clear progress and regenerate questions with new data
+    await this.clearProgress();
+    
+    // Clear existing questions and categories
+    this.categories.clear();
+    this.questions.clear();
+    
+    // Re-initialize with fresh data
+    this.initializeData();
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {

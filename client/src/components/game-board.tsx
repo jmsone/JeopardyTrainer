@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Target, Zap } from "lucide-react";
+import { Clock, Target, Zap, RotateCcw } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Category, QuestionWithCategory, CategoryStats } from "@shared/schema";
 
 interface GameBoardProps {
@@ -26,7 +27,26 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
     queryKey: ["/api/answered-questions"],
   });
 
+  const resetBoardMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/reset-board"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/questions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/answered-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    },
+  });
+
   const values = [200, 400, 600, 800, 1000];
+  const totalQuestions = categories?.length ? categories.length * values.length : 30;
+  const completedQuestions = answeredQuestions.length;
+  const isGameComplete = completedQuestions >= totalQuestions;
+
+  const handleResetBoard = () => {
+    if (confirm("Are you sure you want to reset the board? This will generate new questions and clear all progress.")) {
+      resetBoardMutation.mutate();
+    }
+  };
 
   return (
     <section className="p-4" data-testid="game-board">
@@ -85,6 +105,27 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
           </div>
         </div>
       </Card>
+
+      {/* Completion Status */}
+      {isGameComplete && (
+        <Card className="p-4 mb-4 bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
+          <div className="text-center">
+            <h3 className="font-bold text-green-800 dark:text-green-200 mb-2">🎉 Game Board Complete!</h3>
+            <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+              You've answered all {totalQuestions} questions! Ready for a new challenge?
+            </p>
+            <Button 
+              onClick={handleResetBoard}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={resetBoardMutation.isPending}
+              data-testid="button-reset-board-complete"
+            >
+              <RotateCcw className="mr-2" size={16} />
+              {resetBoardMutation.isPending ? "Generating New Board..." : "Get New Questions"}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Quick Study Mode */}
       <Card className="p-4">
