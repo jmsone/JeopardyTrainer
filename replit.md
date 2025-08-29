@@ -47,6 +47,7 @@ A mobile-optimized web application for Jeopardy training featuring spaced repeti
 - Emphasizes knowledge retention over perfect spelling/formatting
 - Requires authentic, current Jeopardy data with proper time context
 - Requests air date information for questions that may become outdated
+- Expects seamless continuation after completing sessions (reset/restart functionality)
 
 ## Next Steps
 1. Integrate authentic Jeopardy data source (jService.io API)
