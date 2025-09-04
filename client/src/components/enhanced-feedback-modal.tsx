@@ -180,15 +180,39 @@ export default function EnhancedFeedbackModal({
                       <div className="text-sm prose prose-sm max-w-none" data-testid="text-explanation">
                         {(learningMaterial.explanation || '').split('\n').map((line, index) => {
                           const trimmed = line.trim();
-                          // Filter out very short incomplete sentences
-                          if (trimmed.length < 10 || trimmed.match(/^[A-Z][a-z]{1,4}$/)) {
+                          
+                          // Filter out unwanted sections
+                          if (trimmed.toLowerCase().includes('why this is correct') || 
+                              trimmed.length < 10 || 
+                              trimmed.match(/^[A-Z][a-z]{1,4}$/) ||
+                              trimmed.endsWith('...') ||
+                              (trimmed.length < 50 && trimmed.split(' ').length < 5)) {
                             return null;
                           }
+                          
+                          // Handle bold headers
                           if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
                             return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
-                          } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-                            return <li key={index} className="ml-4 mb-1 text-sm">{trimmed.slice(1).trim()}</li>;
-                          } else if (trimmed.length > 0) {
+                          } 
+                          // Handle bullet points with indentation
+                          else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                            return <li key={index} className="ml-6 mb-1 text-sm list-disc">{trimmed.slice(1).trim()}</li>;
+                          } 
+                          // Handle inline bold text
+                          else if (trimmed.includes('**')) {
+                            const parts = trimmed.split('**');
+                            return (
+                              <p key={index} className="mb-1 text-sm leading-snug">
+                                {parts.map((part, partIndex) => 
+                                  partIndex % 2 === 1 ? 
+                                    <strong key={partIndex} className="font-semibold">{part}</strong> : 
+                                    part
+                                )}
+                              </p>
+                            );
+                          } 
+                          // Regular text
+                          else if (trimmed.length > 0) {
                             return <p key={index} className="mb-1 text-sm leading-snug">{trimmed}</p>;
                           }
                           return null;
