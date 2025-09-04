@@ -18,7 +18,19 @@ export default function StudyPage() {
   const [, setLocation] = useLocation();
 
   const processContent = (content: string) => {
-    return content.split('\n').map((line, index) => {
+    // First, fix concatenated bullet points and common formatting issues
+    let processedContent = content
+      // Split concatenated bullet points like ".- " into proper line breaks
+      .replace(/\.\s*-\s*/g, '.\n- ')
+      // Split concatenated sentences that end with period and start with capital letter
+      .replace(/\.\s*([A-Z])/g, '.\n$1')
+      // Handle bullet points that might be concatenated without periods
+      .replace(/([^.])\s*-\s*([A-Z])/g, '$1\n- $2')
+      // Handle cases where bullet points are joined with semicolons or commas
+      .replace(/;\s*-\s*/g, '\n- ')
+      .replace(/,\s*-\s*/g, '\n- ');
+    
+    return processedContent.split('\n').map((line, index) => {
       const trimmed = line.trim();
       
       // Enhanced filtering for unwanted sections
