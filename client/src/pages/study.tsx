@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { BookOpen, Brain, ExternalLink, Plus, Loader2, CheckCircle, XCircle, HelpCircle, ChevronLeft } from "lucide-react";
+import { BookOpen, Brain, ExternalLink, Plus, Loader2, CheckCircle, XCircle, HelpCircle, ChevronLeft, Star, TrendingUp, Zap, Gem } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { StudyReview, StudyMaterial, Category, QuestionWithLearning } from "@shared/schema";
@@ -270,7 +270,20 @@ export default function StudyPage() {
                     <h4 className="font-semibold text-lg">{material.title}</h4>
                     
                     <div className="prose prose-sm max-w-none">
-                      <p className="leading-relaxed whitespace-pre-wrap">{material.content}</p>
+                      {material.content.split('\n').map((line, index) => {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+                          // Header formatting
+                          return <h4 key={index} className="font-semibold mt-4 mb-2 text-primary">{trimmed.slice(2, -2)}</h4>;
+                        } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                          // Bullet point formatting
+                          return <li key={index} className="ml-4 mb-1">{trimmed.slice(1).trim()}</li>;
+                        } else if (trimmed.length > 0) {
+                          // Regular paragraph
+                          return <p key={index} className="mb-2 leading-relaxed">{trimmed}</p>;
+                        }
+                        return null;
+                      })}
                     </div>
                     
                     {material.relatedTopics.length > 0 && (

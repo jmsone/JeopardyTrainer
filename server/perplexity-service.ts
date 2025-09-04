@@ -37,25 +37,48 @@ export class PerplexityService {
     const userPrompt = userWasCorrect
       ? `Great job! You correctly answered: "${correctAnswer}" to the question "${question}". 
 
-Create a comprehensive learning blurb that includes:
-1. Why this answer is correct and its significance
-2. Related trivia and interesting facts about this topic
-3. How common or rare this type of question is on Jeopardy (very common, common, uncommon, or rare)
-4. Additional context that deepens understanding
-5. Memory aids or connections to help retention
+Create a well-formatted learning explanation with the following structure:
 
-Make this engaging and educational, focusing on building broader knowledge around this topic.`
+**Why This Answer Matters:**
+Explain the significance and context of this answer.
+
+**Key Trivia Facts:**
+• Provide 2-3 bullet points with interesting related facts
+• Focus on information that commonly appears in trivia
+• Include memorable details that aid retention
+
+**Memory Techniques:**
+Share specific strategies or associations to remember this topic.
+
+**How Common on Jeopardy:**
+Rate this topic as: very common, common, uncommon, or rare
+
+**Question Variations:**
+Explain how this topic might be asked differently in Jeopardy.
+
+Use proper formatting with headers, bullet points, and line breaks for readability.`
       : `The correct answer to "${question}" is "${correctAnswer}".
 
-Create a comprehensive learning blurb that includes:
-1. Clear explanation of why this is the correct answer
-2. Key facts and context for remembering this answer
-3. Related trivia and interesting facts about this topic
-4. How common or rare this type of question is on Jeopardy (very common, common, uncommon, or rare)
-5. Memory techniques or associations that could help
-6. Broader context that helps understand the subject
+Create a well-formatted learning explanation with the following structure:
 
-Make this educational and engaging, helping build knowledge from this mistake.`;
+**Why This is Correct:**
+Clear explanation of why this is the right answer.
+
+**Key Facts to Remember:**
+• Provide 2-3 bullet points with essential information
+• Focus on details that help distinguish this from similar topics
+• Include context that makes this memorable
+
+**Memory Techniques:**
+Share specific strategies or associations to remember this topic.
+
+**How Common on Jeopardy:**
+Rate this topic as: very common, common, uncommon, or rare
+
+**Question Variations:**
+Explain how this topic might be asked differently in future questions.
+
+Use proper formatting with headers, bullet points, and line breaks for readability.`;
 
     try {
       const response = await fetch(this.baseUrl, {
@@ -126,14 +149,26 @@ Make this educational and engaging, helping build knowledge from this mistake.`;
 
     const detailedPrompt = `${prompt}
 
-Please provide:
-1. A clear, informative title
-2. Detailed content covering key facts, dates, names, and concepts that commonly appear on Jeopardy
-3. Important connections and relationships between concepts
-4. Memory aids and interesting details that help with retention
-5. List related topics that contestants should also study
+Create a well-structured study guide with the following format:
 
-Focus on information that would be valuable for someone preparing for Jeopardy, including both basic facts and deeper knowledge that demonstrates expertise.`;
+**Essential Trivia Facts:**
+• List 4-5 key facts that frequently appear in Jeopardy questions
+• Include specific names, dates, and numbers that are commonly tested
+• Focus on information that helps distinguish similar topics
+
+**Common Question Patterns:**
+Explain how this topic typically appears in Jeopardy questions and what contestants should look for.
+
+**Memory Techniques:**
+Provide specific strategies to remember the key facts.
+
+**Related Topics to Study:**
+List 3-4 related topics that often appear together in trivia.
+
+**Quick Reference:**
+Summarize the most important facts in a concise format.
+
+Use proper formatting with headers, bullet points, and clear organization for easy studying.`;
 
     try {
       const response = await fetch(this.baseUrl, {

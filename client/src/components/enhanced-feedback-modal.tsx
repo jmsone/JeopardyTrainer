@@ -55,7 +55,7 @@ export default function EnhancedFeedbackModal({
   });
 
   // Fetch existing learning material
-  const { data: existingMaterial } = useQuery<LearningMaterial>({
+  const { data: existingMaterial, refetch: refetchExisting } = useQuery<LearningMaterial>({
     queryKey: [`/api/learning-materials/${questionId}`],
     enabled: false, // Don't auto-fetch, only when needed
   });
@@ -63,11 +63,17 @@ export default function EnhancedFeedbackModal({
   const handleShowLearningMaterial = async () => {
     setShowLearningMaterial(true);
     
-    // Try to get existing material first, otherwise generate new one
-    if (existingMaterial) {
-      return;
+    // Try to get existing material first
+    try {
+      const existing = await refetchExisting();
+      if (existing.data) {
+        return;
+      }
+    } catch (error) {
+      console.log('No existing material found, generating new one');
     }
     
+    // Generate new material if none exists
     try {
       await generateLearningMutation.mutateAsync();
     } catch (error) {
@@ -154,9 +160,11 @@ export default function EnhancedFeedbackModal({
                     {/* Explanation */}
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <h5 className="font-medium mb-2">Explanation</h5>
-                      <p className="text-sm leading-relaxed" data-testid="text-explanation">
-                        {learningMaterial.explanation}
-                      </p>
+                      <div className="text-sm leading-relaxed prose prose-sm max-w-none" data-testid="text-explanation">
+                        {learningMaterial.explanation.split('\n').map((line, index) => (
+                          <p key={index} className="mb-2">{line}</p>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Related Facts */}
