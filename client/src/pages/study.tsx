@@ -17,6 +17,48 @@ export default function StudyPage() {
   const [studyTopic, setStudyTopic] = useState("");
   const [, setLocation] = useLocation();
 
+  const processContent = (content: string) => {
+    return content.split('\n').map((line, index) => {
+      const trimmed = line.trim();
+      
+      // Filter out unwanted sections
+      if (trimmed.toLowerCase().includes('why this is correct') || 
+          trimmed.length < 10 || 
+          trimmed.match(/^[A-Z][a-z]{1,4}$/) ||
+          trimmed.endsWith('...') ||
+          (trimmed.length < 50 && trimmed.split(' ').length < 5)) {
+        return null;
+      }
+      
+      // Handle bold headers
+      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
+      } 
+      // Handle bullet points with indentation
+      else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        return <li key={index} className="ml-6 mb-1 text-sm list-disc">{trimmed.slice(1).trim()}</li>;
+      } 
+      // Handle inline bold text
+      else if (trimmed.includes('**')) {
+        const parts = trimmed.split('**');
+        return (
+          <p key={index} className="mb-1 text-sm leading-snug">
+            {parts.map((part, partIndex) => 
+              partIndex % 2 === 1 ? 
+                <strong key={partIndex} className="font-semibold">{part}</strong> : 
+                part
+            )}
+          </p>
+        );
+      } 
+      // Regular text
+      else if (trimmed.length > 0) {
+        return <p key={index} className="mb-1 text-sm leading-snug">{trimmed}</p>;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
   // Fetch categories for study material generation
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
@@ -72,15 +114,35 @@ export default function StudyPage() {
               <BookOpen size={14} className="mr-1" />
               Learning Material
             </h5>
-            <p className="text-xs leading-relaxed">{question.learningMaterial.explanation}</p>
+            <div className="text-xs">
+              {processContent(question.learningMaterial.explanation)}
+            </div>
             
             {question.learningMaterial.relatedFacts.length > 0 && (
               <div className="space-y-1">
                 <h6 className="font-medium text-xs">Related Facts:</h6>
-                {question.learningMaterial.relatedFacts.slice(0, 2).map((fact, factIndex) => (
-                  <p key={factIndex} className="text-xs text-muted-foreground">
-                    • {fact}
-                  </p>
+                {question.learningMaterial.relatedFacts
+                  .filter(fact => {
+                    const trimmed = fact.trim();
+                    return trimmed.length >= 10 && 
+                           !trimmed.toLowerCase().includes('why this is correct') &&
+                           !trimmed.endsWith('...') &&
+                           !(trimmed.length < 50 && trimmed.split(' ').length < 5);
+                  })
+                  .slice(0, 2)
+                  .map((fact, factIndex) => (
+                  <div key={factIndex} className="text-xs text-muted-foreground">
+                    <span className="inline-block w-1 h-1 bg-muted-foreground rounded-full mr-2"></span>
+                    <span className="inline">
+                      {fact.includes('**') ? (
+                        fact.split('**').map((part, partIndex) => 
+                          partIndex % 2 === 1 ? 
+                            <strong key={partIndex} className="font-semibold">{part}</strong> : 
+                            part
+                        )
+                      ) : fact}
+                    </span>
+                  </div>
                 ))}
               </div>
             )}
@@ -270,20 +332,7 @@ export default function StudyPage() {
                     <h4 className="font-semibold text-lg">{material.title}</h4>
                     
                     <div className="prose prose-sm max-w-none">
-                      {material.content.split('\n').map((line, index) => {
-                        const trimmed = line.trim();
-                        if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-                          // Header formatting
-                          return <h4 key={index} className="font-semibold mt-4 mb-2 text-primary">{trimmed.slice(2, -2)}</h4>;
-                        } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-                          // Bullet point formatting
-                          return <li key={index} className="ml-4 mb-1">{trimmed.slice(1).trim()}</li>;
-                        } else if (trimmed.length > 0) {
-                          // Regular paragraph
-                          return <p key={index} className="mb-2 leading-relaxed">{trimmed}</p>;
-                        }
-                        return null;
-                      })}
+                      {processContent(material.content)}
                     </div>
                     
                     {material.relatedTopics.length > 0 && (
