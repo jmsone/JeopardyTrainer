@@ -92,10 +92,11 @@ export default function EnhancedFeedbackModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       data-testid="enhanced-feedback-modal"
     >
-      <Card className="p-6 max-w-2xl w-full shadow-xl my-8">
+      <div className="max-h-[90vh] overflow-y-auto w-full max-w-2xl">
+        <Card className="p-4 w-full shadow-xl">
         <div className="text-center mb-6">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
             correct ? 'bg-accent' : 'bg-destructive'
@@ -164,10 +165,18 @@ export default function EnhancedFeedbackModal({
                     {/* Explanation */}
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <h5 className="font-medium mb-2">Explanation</h5>
-                      <div className="text-sm leading-relaxed prose prose-sm max-w-none" data-testid="text-explanation">
-                        {(learningMaterial.explanation || '').split('\n').map((line, index) => (
-                          <p key={index} className="mb-2">{line}</p>
-                        ))}
+                      <div className="text-sm prose prose-sm max-w-none" data-testid="text-explanation">
+                        {(learningMaterial.explanation || '').split('\n').map((line, index) => {
+                          const trimmed = line.trim();
+                          if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+                            return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
+                          } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+                            return <li key={index} className="ml-4 mb-1 text-sm">{trimmed.slice(1).trim()}</li>;
+                          } else if (trimmed.length > 0) {
+                            return <p key={index} className="mb-1 text-sm leading-snug">{trimmed}</p>;
+                          }
+                          return null;
+                        })}
                       </div>
                     </div>
 
@@ -177,8 +186,8 @@ export default function EnhancedFeedbackModal({
                         <h5 className="font-medium mb-2">Related Trivia Facts</h5>
                         <div className="space-y-2">
                           {learningMaterial.relatedFacts.map((fact, index) => (
-                            <div key={index} className="bg-muted/30 p-3 rounded text-sm" data-testid={`related-fact-${index}`}>
-                              <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
+                            <div key={index} className="bg-muted/30 p-2 rounded text-sm" data-testid={`related-fact-${index}`}>
+                              <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
                               {fact}
                             </div>
                           ))}
@@ -225,7 +234,8 @@ export default function EnhancedFeedbackModal({
         >
           Continue
         </Button>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
