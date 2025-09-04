@@ -52,6 +52,10 @@ export default function EnhancedFeedbackModal({
         userWasCorrect: userAssessment === "correct"
       });
     },
+    onSuccess: () => {
+      // Invalidate and refetch the existing material query after successful generation
+      refetchExisting();
+    },
   });
 
   // Fetch existing learning material
