@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserProgressSchema, insertSpacedRepetitionSchema } from "@shared/schema";
+import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema } from "@shared/schema";
 import { z } from "zod";
+import { perplexityService } from "./perplexity-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Categories
@@ -163,6 +164,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch overall stats" });
+    }
+  });
+
+  // Learning Materials
+  app.post("/api/learning-materials", async (req, res) => {
+    try {
+      const { questionId, userWasCorrect } = req.body;
+      
+      // Check if learning material already exists
+      const existing = await storage.getLearningMaterial(questionId);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Get question details
+      const question = await storage.getQuestion(questionId);
+      if (!question) {
+        return res.status(404).json({ message: "Question not found" });
+      }
+
+      // Generate explanation using Perplexity
+      const explanation = await perplexityService.generateExplanation(
+        question.text,
+        question.answer,
+        userWasCorrect || false
+      );
+
+      // Save to storage
+      const learningMaterial = await storage.createLearningMaterial({
+        questionId,
+        explanation: explanation.explanation,
+        sources: explanation.sources,
+        relatedFacts: explanation.relatedFacts,
+      });
+
+      res.json(learningMaterial);
+    } catch (error) {
+      console.error('Error generating learning material:', error);
+      res.status(500).json({ message: "Failed to generate learning material" });
+    }
+  });
+
+  app.get("/api/learning-materials/:questionId", async (req, res) => {
+    try {
+      const material = await storage.getLearningMaterial(req.params.questionId);
+      if (!material) {
+        return res.status(404).json({ message: "Learning material not found" });
+      }
+      res.json(material);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch learning material" });
+    }
+  });
+
+  // Study Review
+  app.get("/api/study-review", async (req, res) => {
+    try {
+      const review = await storage.getStudyReview();
+      res.json(review);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch study review" });
+    }
+  });
+
+  // Study Materials
+  app.get("/api/study-materials", async (req, res) => {
+    try {
+      const { category } = req.query;
+      
+      if (category) {
+        const materials = await storage.getStudyMaterialsByCategory(category as string);
+        res.json(materials);
+      } else {
+        const materials = await storage.getStudyMaterials();
+        res.json(materials);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch study materials" });
+    }
+  });
+
+  app.post("/api/study-materials", async (req, res) => {
+    try {
+      const { category, topic } = req.body;
+      
+      if (!category) {
+        return res.status(400).json({ message: "Category is required" });
+      }
+
+      // Generate study material using Perplexity
+      const generatedMaterial = await perplexityService.generateStudyMaterial(category, topic);
+
+      // Save to storage
+      const studyMaterial = await storage.createStudyMaterial({
+        category,
+        title: generatedMaterial.title,
+        content: generatedMaterial.content,
+        sources: generatedMaterial.sources,
+        relatedTopics: generatedMaterial.relatedTopics,
+        difficulty: 3, // Default difficulty
+      });
+
+      res.json(studyMaterial);
+    } catch (error) {
+      console.error('Error generating study material:', error);
+      res.status(500).json({ message: "Failed to generate study material" });
     }
   });
 

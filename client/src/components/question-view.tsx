@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { QuestionWithCategory } from "@shared/schema";
+import EnhancedFeedbackModal from "./enhanced-feedback-modal";
 
 interface QuestionViewProps {
   questionId: string;
@@ -16,6 +17,8 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
   const [timeSpent, setTimeSpent] = useState(0);
   const [startTime] = useState(Date.now());
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [userAssessment, setUserAssessment] = useState<"correct" | "incorrect" | "unsure">("unsure");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -49,6 +52,8 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
   const handleSelfAssessment = async (assessment: "correct" | "incorrect" | "unsure") => {
     if (!question) return;
 
+    setUserAssessment(assessment);
+
     await submitAnswerMutation.mutateAsync({
       questionId: question.id,
       correct: assessment === "correct",
@@ -57,7 +62,13 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
       selfAssessment: assessment,
     });
 
-    onAnswerSubmit(assessment === "correct", question.answer, question.value);
+    setShowFeedback(true);
+  };
+
+  const handleFeedbackNext = () => {
+    if (!question) return;
+    setShowFeedback(false);
+    onAnswerSubmit(userAssessment === "correct", question.answer, question.value);
   };
 
   if (isLoading) {
@@ -174,6 +185,17 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
           )}
         </div>
       </Card>
+
+      {/* Enhanced Feedback Modal */}
+      <EnhancedFeedbackModal
+        isVisible={showFeedback}
+        correct={userAssessment === "correct"}
+        answer={question.answer}
+        value={question.value}
+        questionId={question.id}
+        userAssessment={userAssessment}
+        onNext={handleFeedbackNext}
+      />
     </section>
   );
 }

@@ -40,6 +40,26 @@ export const spacedRepetition = pgTable("spaced_repetition", {
   lastReviewed: timestamp("last_reviewed"),
 });
 
+export const learningMaterials = pgTable("learning_materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionId: varchar("question_id").notNull().references(() => questions.id),
+  explanation: text("explanation").notNull(),
+  sources: text("sources").array().notNull(), // JSON array of source URLs
+  relatedFacts: text("related_facts").array().notNull(), // Additional trivia facts
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+});
+
+export const studyMaterials = pgTable("study_materials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: text("category").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  sources: text("sources").array().notNull(),
+  relatedTopics: text("related_topics").array().notNull(),
+  difficulty: integer("difficulty").notNull().default(3), // 1-5 scale
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
 });
@@ -59,19 +79,43 @@ export const insertSpacedRepetitionSchema = createInsertSchema(spacedRepetition)
   id: true,
 });
 
+export const insertLearningMaterialSchema = createInsertSchema(learningMaterials).omit({
+  id: true,
+  generatedAt: true,
+});
+
+export const insertStudyMaterialSchema = createInsertSchema(studyMaterials).omit({
+  id: true,
+  generatedAt: true,
+});
+
 export type Category = typeof categories.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type UserProgress = typeof userProgress.$inferSelect;
 export type SpacedRepetition = typeof spacedRepetition.$inferSelect;
+export type LearningMaterial = typeof learningMaterials.$inferSelect;
+export type StudyMaterial = typeof studyMaterials.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 export type InsertSpacedRepetition = z.infer<typeof insertSpacedRepetitionSchema>;
+export type InsertLearningMaterial = z.infer<typeof insertLearningMaterialSchema>;
+export type InsertStudyMaterial = z.infer<typeof insertStudyMaterialSchema>;
 
 // Extended types for API responses
 export type QuestionWithCategory = Question & {
   category: Category;
+};
+
+export type QuestionWithLearning = QuestionWithCategory & {
+  learningMaterial?: LearningMaterial;
+};
+
+export type StudyReview = {
+  correct: QuestionWithLearning[];
+  incorrect: QuestionWithLearning[];
+  unsure: QuestionWithLearning[];
 };
 
 export type CategoryStats = {

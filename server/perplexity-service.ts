@@ -1,0 +1,250 @@
+interface PerplexityResponse {
+  id: string;
+  model: string;
+  object: string;
+  created: number;
+  citations: string[];
+  choices: Array<{
+    index: number;
+    finish_reason: string;
+    message: {
+      role: string;
+      content: string;
+    };
+  }>;
+}
+
+interface LearningExplanation {
+  explanation: string;
+  sources: string[];
+  relatedFacts: string[];
+}
+
+export class PerplexityService {
+  private readonly apiKey: string;
+  private readonly baseUrl = 'https://api.perplexity.ai/chat/completions';
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async generateExplanation(question: string, correctAnswer: string, userWasCorrect: boolean): Promise<LearningExplanation> {
+    const systemPrompt = userWasCorrect 
+      ? `You are an expert Jeopardy tutor. The user answered correctly. Provide additional context and learning material about this topic.`
+      : `You are an expert Jeopardy tutor helping a student learn from their mistake. Provide a clear explanation and additional context.`;
+
+    const userPrompt = userWasCorrect
+      ? `Great job! You correctly answered: "${correctAnswer}" to the question "${question}". 
+
+Please provide:
+1. A brief explanation of why this answer is correct
+2. Additional interesting facts related to this topic that could appear in future Jeopardy questions
+3. Context that helps deepen understanding of this subject
+
+Keep the explanation engaging and educational, focusing on what makes this topic interesting for trivia enthusiasts.`
+      : `The correct answer to "${question}" is "${correctAnswer}".
+
+Please provide:
+1. A clear explanation of why this is the correct answer
+2. Key facts and context that would help someone remember this answer
+3. Related trivia facts about this topic that commonly appear on Jeopardy
+4. Any memory techniques or associations that could help
+
+Make this educational and engaging, helping the student learn from their mistake.`;
+
+    try {
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-sonar-small-128k-online',
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user',
+              content: userPrompt
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 500,
+          return_related_questions: false,
+          search_recency_filter: 'month',
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Perplexity API error: ${response.status}`);
+      }
+
+      const data: PerplexityResponse = await response.json();
+      const explanation = data.choices[0]?.message?.content || 'No explanation available';
+      const sources = data.citations || [];
+
+      // Extract related facts from the explanation (simple approach - split by numbered points)
+      const relatedFacts = this.extractRelatedFacts(explanation);
+
+      return {
+        explanation,
+        sources,
+        relatedFacts
+      };
+    } catch (error) {
+      console.error('Error generating explanation:', error);
+      // Return fallback explanation
+      return {
+        explanation: `The correct answer is ${correctAnswer}. This is a common Jeopardy topic that appears frequently in trivia competitions.`,
+        sources: [],
+        relatedFacts: []
+      };
+    }
+  }
+
+  async generateStudyMaterial(category: string, topic?: string): Promise<{
+    title: string;
+    content: string;
+    sources: string[];
+    relatedTopics: string[];
+  }> {
+    const prompt = topic 
+      ? `Create comprehensive study material for Jeopardy contestants about ${topic} in the ${category} category.`
+      : `Create comprehensive study material for Jeopardy contestants about key topics in the ${category} category.`;
+
+    const detailedPrompt = `${prompt}
+
+Please provide:
+1. A clear, informative title
+2. Detailed content covering key facts, dates, names, and concepts that commonly appear on Jeopardy
+3. Important connections and relationships between concepts
+4. Memory aids and interesting details that help with retention
+5. List related topics that contestants should also study
+
+Focus on information that would be valuable for someone preparing for Jeopardy, including both basic facts and deeper knowledge that demonstrates expertise.`;
+
+    try {
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-sonar-small-128k-online',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert Jeopardy coach creating study materials for contestants. Focus on facts, dates, names, and concepts that frequently appear on the show.'
+            },
+            {
+              role: 'user',
+              content: detailedPrompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 800,
+          return_related_questions: false,
+          search_recency_filter: 'year',
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Perplexity API error: ${response.status}`);
+      }
+
+      const data: PerplexityResponse = await response.json();
+      const content = data.choices[0]?.message?.content || 'Study material not available';
+      const sources = data.citations || [];
+
+      // Extract title and related topics from content
+      const { title, cleanedContent } = this.extractTitleFromContent(content, category, topic);
+      const relatedTopics = this.extractRelatedTopics(content);
+
+      return {
+        title,
+        content: cleanedContent,
+        sources,
+        relatedTopics
+      };
+    } catch (error) {
+      console.error('Error generating study material:', error);
+      return {
+        title: `${category} Study Guide`,
+        content: `Study material for ${category} category. Key concepts and facts commonly appearing on Jeopardy.`,
+        sources: [],
+        relatedTopics: []
+      };
+    }
+  }
+
+  private extractRelatedFacts(explanation: string): string[] {
+    // Simple extraction of numbered points or bullet points as related facts
+    const facts: string[] = [];
+    const lines = explanation.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Look for numbered points (1., 2., etc.) or bullet points (•, -, *)
+      if (/^[\d+\.\-\*\•]/.test(trimmed) && trimmed.length > 10) {
+        // Remove the numbering/bullet and clean up
+        const cleaned = trimmed.replace(/^[\d+\.\-\*\•]\s*/, '').trim();
+        if (cleaned.length > 10) {
+          facts.push(cleaned);
+        }
+      }
+    }
+    
+    return facts.slice(0, 5); // Limit to 5 related facts
+  }
+
+  private extractTitleFromContent(content: string, category: string, topic?: string): { title: string; cleanedContent: string } {
+    const lines = content.split('\n');
+    let title = topic ? `${topic} - ${category}` : `${category} Study Guide`;
+    let cleanedContent = content;
+
+    // Look for potential title in first few lines
+    for (let i = 0; i < Math.min(3, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.length > 5 && line.length < 100 && !line.includes('.') && line === line.toUpperCase()) {
+        title = line;
+        cleanedContent = lines.slice(i + 1).join('\n').trim();
+        break;
+      }
+    }
+
+    return { title, cleanedContent };
+  }
+
+  private extractRelatedTopics(content: string): string[] {
+    const topics: string[] = [];
+    const lines = content.split('\n');
+    
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (lower.includes('related') && (lower.includes('topics') || lower.includes('subjects'))) {
+        // Found a related topics section
+        const index = lines.indexOf(line);
+        for (let i = index + 1; i < Math.min(index + 6, lines.length); i++) {
+          const topicLine = lines[i].trim();
+          if (topicLine.length > 3 && topicLine.length < 50) {
+            const cleaned = topicLine.replace(/^[\d+\.\-\*\•]\s*/, '').trim();
+            if (cleaned.length > 3) {
+              topics.push(cleaned);
+            }
+          }
+        }
+        break;
+      }
+    }
+    
+    return topics.slice(0, 8); // Limit to 8 related topics
+  }
+}
+
+export const perplexityService = new PerplexityService(process.env.PERPLEXITY_API_KEY || '');

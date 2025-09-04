@@ -3,11 +3,17 @@ import {
   type Question, 
   type UserProgress, 
   type SpacedRepetition,
+  type LearningMaterial,
+  type StudyMaterial,
   type InsertCategory,
   type InsertQuestion,
   type InsertUserProgress,
   type InsertSpacedRepetition,
+  type InsertLearningMaterial,
+  type InsertStudyMaterial,
   type QuestionWithCategory,
+  type QuestionWithLearning,
+  type StudyReview,
   type CategoryStats,
   type DailyStats
 } from "@shared/schema";
@@ -42,6 +48,16 @@ export interface IStorage {
   updateSpacedRepetition(id: string, data: Partial<SpacedRepetition>): Promise<SpacedRepetition>;
   getQuestionsForReview(limit?: number): Promise<QuestionWithCategory[]>;
   
+  // Learning Materials
+  getLearningMaterial(questionId: string): Promise<LearningMaterial | undefined>;
+  createLearningMaterial(material: InsertLearningMaterial): Promise<LearningMaterial>;
+  getStudyReview(): Promise<StudyReview>;
+  
+  // Study Materials  
+  getStudyMaterials(): Promise<StudyMaterial[]>;
+  getStudyMaterialsByCategory(category: string): Promise<StudyMaterial[]>;
+  createStudyMaterial(material: InsertStudyMaterial): Promise<StudyMaterial>;
+  
   // Statistics
   getCategoryStats(): Promise<CategoryStats[]>;
   getDailyStats(days: number): Promise<DailyStats[]>;
@@ -58,6 +74,8 @@ export class MemStorage implements IStorage {
   private questions: Map<string, Question> = new Map();
   private userProgress: Map<string, UserProgress> = new Map();
   private spacedRepetition: Map<string, SpacedRepetition> = new Map();
+  private learningMaterials: Map<string, LearningMaterial> = new Map();
+  private studyMaterials: Map<string, StudyMaterial> = new Map();
 
   constructor() {
     this.initializeData();
@@ -75,7 +93,7 @@ export class MemStorage implements IStorage {
     ];
 
     sampleCategories.forEach(cat => {
-      const category: Category = { ...cat, id: randomUUID() };
+      const category: Category = { ...cat, id: randomUUID(), weight: cat.weight || 1.0 };
       this.categories.set(category.id, category);
     });
 
@@ -131,7 +149,14 @@ export class MemStorage implements IStorage {
     categoryArray.forEach(category => {
       const questionsForCategory = sampleQuestions[category.name] || [];
       questionsForCategory.forEach(q => {
-        const question: Question = { ...q, categoryId: category.id, id: randomUUID() };
+        const question: Question = { 
+          ...q, 
+          categoryId: category.id, 
+          id: randomUUID(),
+          difficulty: q.difficulty || 1,
+          airDate: q.airDate || null,
+          jServiceId: q.jServiceId || null
+        };
         this.questions.set(question.id, question);
         
         // Initialize spaced repetition data for each question
@@ -155,7 +180,7 @@ export class MemStorage implements IStorage {
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     const id = randomUUID();
-    const category: Category = { ...insertCategory, id };
+    const category: Category = { ...insertCategory, id, weight: insertCategory.weight || 1.0 };
     this.categories.set(id, category);
     return category;
   }
@@ -239,7 +264,13 @@ export class MemStorage implements IStorage {
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
     const id = randomUUID();
-    const question: Question = { ...insertQuestion, id };
+    const question: Question = { 
+      ...insertQuestion, 
+      id,
+      difficulty: insertQuestion.difficulty || 1,
+      airDate: insertQuestion.airDate || null,
+      jServiceId: insertQuestion.jServiceId || null
+    };
     this.questions.set(id, question);
     return question;
   }
@@ -253,7 +284,10 @@ export class MemStorage implements IStorage {
     const progress: UserProgress = { 
       ...insertProgress, 
       id, 
-      answeredAt: new Date() 
+      answeredAt: new Date(),
+      userAnswer: insertProgress.userAnswer || null,
+      timeSpent: insertProgress.timeSpent || null,
+      selfAssessment: insertProgress.selfAssessment || "unsure"
     };
     this.userProgress.set(id, progress);
     return progress;
@@ -401,6 +435,67 @@ export class MemStorage implements IStorage {
       currentStreak,
       totalStudyTime,
     };
+  }
+
+  // Learning Materials implementation
+  async getLearningMaterial(questionId: string): Promise<LearningMaterial | undefined> {
+    return Array.from(this.learningMaterials.values()).find(lm => lm.questionId === questionId);
+  }
+
+  async createLearningMaterial(insertMaterial: InsertLearningMaterial): Promise<LearningMaterial> {
+    const id = randomUUID();
+    const material: LearningMaterial = { 
+      ...insertMaterial, 
+      id, 
+      generatedAt: new Date() 
+    };
+    this.learningMaterials.set(id, material);
+    return material;
+  }
+
+  async getStudyReview(): Promise<StudyReview> {
+    const allProgress = await this.getUserProgress();
+    const review: StudyReview = {
+      correct: [],
+      incorrect: [],
+      unsure: []
+    };
+
+    for (const progress of allProgress) {
+      const questionWithCategory = await this.getQuestion(progress.questionId);
+      if (!questionWithCategory) continue;
+
+      const learningMaterial = await this.getLearningMaterial(progress.questionId);
+      const questionWithLearning: QuestionWithLearning = {
+        ...questionWithCategory,
+        learningMaterial
+      };
+
+      review[progress.selfAssessment].push(questionWithLearning);
+    }
+
+    return review;
+  }
+
+  // Study Materials implementation
+  async getStudyMaterials(): Promise<StudyMaterial[]> {
+    return Array.from(this.studyMaterials.values());
+  }
+
+  async getStudyMaterialsByCategory(category: string): Promise<StudyMaterial[]> {
+    return Array.from(this.studyMaterials.values()).filter(sm => sm.category === category);
+  }
+
+  async createStudyMaterial(insertMaterial: InsertStudyMaterial): Promise<StudyMaterial> {
+    const id = randomUUID();
+    const material: StudyMaterial = { 
+      ...insertMaterial, 
+      id, 
+      generatedAt: new Date(),
+      difficulty: insertMaterial.difficulty || 3
+    };
+    this.studyMaterials.set(id, material);
+    return material;
   }
 }
 

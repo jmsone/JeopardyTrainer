@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Home, Brain, BarChart3, User } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface BottomNavigationProps {
   currentScreen: string;
@@ -7,12 +8,22 @@ interface BottomNavigationProps {
 }
 
 export default function BottomNavigation({ currentScreen, onScreenChange }: BottomNavigationProps) {
+  const [, setLocation] = useLocation();
+  
   const navItems = [
-    { id: "game", icon: Home, label: "Game" },
-    { id: "study", icon: Brain, label: "Study" },
-    { id: "stats", icon: BarChart3, label: "Stats" },
-    { id: "profile", icon: User, label: "Profile" },
+    { id: "game", icon: Home, label: "Game", path: "/" },
+    { id: "study", icon: Brain, label: "Study", path: "/study" },
+    { id: "stats", icon: BarChart3, label: "Stats", path: "/" },
+    { id: "profile", icon: User, label: "Profile", path: "/" },
   ];
+
+  const handleNavClick = (item: typeof navItems[0]) => {
+    if (item.id === "study") {
+      setLocation(item.path);
+    } else {
+      onScreenChange(item.id);
+    }
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg" data-testid="bottom-navigation">
@@ -25,7 +36,7 @@ export default function BottomNavigation({ currentScreen, onScreenChange }: Bott
             <Button
               key={item.id}
               variant="ghost"
-              onClick={() => onScreenChange(item.id)}
+              onClick={() => handleNavClick(item)}
               className="flex-1 py-3 px-2 h-auto flex flex-col items-center hover:bg-muted transition-colors"
               data-testid={`nav-${item.id}`}
             >
