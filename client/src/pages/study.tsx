@@ -21,22 +21,38 @@ export default function StudyPage() {
     return content.split('\n').map((line, index) => {
       const trimmed = line.trim();
       
-      // Filter out unwanted sections
-      if (trimmed.toLowerCase().includes('why this is correct') || 
-          trimmed.length < 10 || 
-          trimmed.match(/^[A-Z][a-z]{1,4}$/) ||
-          trimmed.endsWith('...') ||
-          (trimmed.length < 50 && trimmed.split(' ').length < 5)) {
+      // Enhanced filtering for unwanted sections
+      if (
+        // Empty or very short lines
+        trimmed.length < 8 || 
+        // Incomplete words or fragments
+        trimmed.match(/^[A-Z][a-z]{1,4}$/) ||
+        // Cut-off sentences
+        trimmed.endsWith('...') ||
+        // "Why this is correct" sections
+        trimmed.toLowerCase().includes('why this is correct') ||
+        trimmed.toLowerCase().includes('why it\'s correct') ||
+        // Very short sentences with few words
+        (trimmed.length < 40 && trimmed.split(' ').length < 4) ||
+        // Common incomplete fragments
+        trimmed.match(/^(The|This|These|That|A|An)\.?$/i) ||
+        // Lines that are just punctuation or single words
+        trimmed.match(/^[.,;:!?-]+$/) ||
+        // Incomplete question variations
+        trimmed.toLowerCase().includes('question variation') && trimmed.length < 30
+      ) {
         return null;
       }
       
-      // Handle bold headers
-      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+      // Handle bold headers (full line wrapped in **)
+      if (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length > 4) {
         return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
       } 
       // Handle bullet points with indentation
-      else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-        return <li key={index} className="ml-6 mb-1 text-sm list-disc">{trimmed.slice(1).trim()}</li>;
+      else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.match(/^\\d+\\./)) {
+        const cleanText = trimmed.replace(/^[\u2022\\-\\d+\\.\\s]+/, '').trim();
+        if (cleanText.length < 8) return null; // Skip if cleaned text is too short
+        return <li key={index} className="ml-6 mb-1 text-sm list-disc">{cleanText}</li>;
       } 
       // Handle inline bold text
       else if (trimmed.includes('**')) {
@@ -51,7 +67,7 @@ export default function StudyPage() {
           </p>
         );
       } 
-      // Regular text
+      // Regular text (must be substantial enough)
       else if (trimmed.length > 0) {
         return <p key={index} className="mb-1 text-sm leading-snug">{trimmed}</p>;
       }
