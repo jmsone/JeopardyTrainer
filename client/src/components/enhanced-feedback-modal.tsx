@@ -161,7 +161,7 @@ export default function EnhancedFeedbackModal({
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <h5 className="font-medium mb-2">Explanation</h5>
                       <div className="text-sm leading-relaxed prose prose-sm max-w-none" data-testid="text-explanation">
-                        {learningMaterial.explanation.split('\n').map((line, index) => (
+                        {(learningMaterial.explanation || '').split('\n').map((line, index) => (
                           <p key={index} className="mb-2">{line}</p>
                         ))}
                       </div>
