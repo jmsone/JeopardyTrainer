@@ -28,7 +28,11 @@ export default function StudyPage() {
       .replace(/([^.])\s*-\s*([A-Z])/g, '$1\n- $2')
       // Handle cases where bullet points are joined with semicolons or commas
       .replace(/;\s*-\s*/g, '\n- ')
-      .replace(/,\s*-\s*/g, '\n- ');
+      .replace(/,\s*-\s*/g, '\n- ')
+      // Handle table formatting with pipes - convert to bullet points
+      .replace(/\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g, '- **$1**: $2 ($3)')
+      // Handle simpler table rows with just Topic | Fact format
+      .replace(/\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|/g, '- **$1**: $2');
     
     return processedContent.split('\n').map((line, index) => {
       const trimmed = line.trim();
