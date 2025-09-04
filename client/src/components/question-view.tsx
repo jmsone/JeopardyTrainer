@@ -190,6 +190,7 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
       <EnhancedFeedbackModal
         isVisible={showFeedback}
         correct={userAssessment === "correct"}
+        question={question.text}
         answer={question.answer}
         value={question.value}
         questionId={question.id}

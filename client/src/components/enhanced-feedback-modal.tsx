@@ -11,6 +11,7 @@ import type { LearningMaterial } from "@shared/schema";
 interface EnhancedFeedbackModalProps {
   isVisible: boolean;
   correct: boolean;
+  question: string;
   answer: string;
   value: number;
   questionId: string;
@@ -21,6 +22,7 @@ interface EnhancedFeedbackModalProps {
 export default function EnhancedFeedbackModal({ 
   isVisible, 
   correct, 
+  question,
   answer, 
   value, 
   questionId,
@@ -162,12 +164,26 @@ export default function EnhancedFeedbackModal({
                       </div>
                     </div>
                     
+                    {/* Question and Answer Context */}
+                    <div className="bg-muted/30 p-3 rounded-lg mb-4">
+                      <div className="text-sm">
+                        <p className="font-medium mb-1 text-primary">Question:</p>
+                        <p className="mb-2">{question}</p>
+                        <p className="font-medium mb-1 text-primary">Answer:</p>
+                        <p className="font-semibold">{answer}</p>
+                      </div>
+                    </div>
+
                     {/* Explanation */}
                     <div className="bg-muted/50 p-4 rounded-lg">
-                      <h5 className="font-medium mb-2">Explanation</h5>
+                      <h5 className="font-medium mb-2">Learning Material</h5>
                       <div className="text-sm prose prose-sm max-w-none" data-testid="text-explanation">
                         {(learningMaterial.explanation || '').split('\n').map((line, index) => {
                           const trimmed = line.trim();
+                          // Filter out very short incomplete sentences
+                          if (trimmed.length < 10 || trimmed.match(/^[A-Z][a-z]{1,4}$/)) {
+                            return null;
+                          }
                           if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
                             return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
                           } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
