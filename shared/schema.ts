@@ -46,6 +46,7 @@ export const learningMaterials = pgTable("learning_materials", {
   explanation: text("explanation").notNull(),
   sources: text("sources").array().notNull(), // JSON array of source URLs
   relatedFacts: text("related_facts").array().notNull(), // Additional trivia facts
+  commonness: varchar("commonness", { enum: ["very_common", "common", "uncommon", "rare"] }).notNull().default("common"),
   generatedAt: timestamp("generated_at").notNull().defaultNow(),
 });
 
@@ -56,7 +57,6 @@ export const studyMaterials = pgTable("study_materials", {
   content: text("content").notNull(),
   sources: text("sources").array().notNull(),
   relatedTopics: text("related_topics").array().notNull(),
-  difficulty: integer("difficulty").notNull().default(3), // 1-5 scale
   generatedAt: timestamp("generated_at").notNull().defaultNow(),
 });
 

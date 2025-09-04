@@ -18,6 +18,7 @@ interface LearningExplanation {
   explanation: string;
   sources: string[];
   relatedFacts: string[];
+  commonness: 'very_common' | 'common' | 'uncommon' | 'rare';
 }
 
 export class PerplexityService {
@@ -36,21 +37,25 @@ export class PerplexityService {
     const userPrompt = userWasCorrect
       ? `Great job! You correctly answered: "${correctAnswer}" to the question "${question}". 
 
-Please provide:
-1. A brief explanation of why this answer is correct
-2. Additional interesting facts related to this topic that could appear in future Jeopardy questions
-3. Context that helps deepen understanding of this subject
+Create a comprehensive learning blurb that includes:
+1. Why this answer is correct and its significance
+2. Related trivia and interesting facts about this topic
+3. How common or rare this type of question is on Jeopardy (very common, common, uncommon, or rare)
+4. Additional context that deepens understanding
+5. Memory aids or connections to help retention
 
-Keep the explanation engaging and educational, focusing on what makes this topic interesting for trivia enthusiasts.`
+Make this engaging and educational, focusing on building broader knowledge around this topic.`
       : `The correct answer to "${question}" is "${correctAnswer}".
 
-Please provide:
-1. A clear explanation of why this is the correct answer
-2. Key facts and context that would help someone remember this answer
-3. Related trivia facts about this topic that commonly appear on Jeopardy
-4. Any memory techniques or associations that could help
+Create a comprehensive learning blurb that includes:
+1. Clear explanation of why this is the correct answer
+2. Key facts and context for remembering this answer
+3. Related trivia and interesting facts about this topic
+4. How common or rare this type of question is on Jeopardy (very common, common, uncommon, or rare)
+5. Memory techniques or associations that could help
+6. Broader context that helps understand the subject
 
-Make this educational and engaging, helping the student learn from their mistake.`;
+Make this educational and engaging, helping build knowledge from this mistake.`;
 
     try {
       const response = await fetch(this.baseUrl, {
@@ -60,7 +65,7 @@ Make this educational and engaging, helping the student learn from their mistake
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-small-128k-online',
+          model: 'sonar',
           messages: [
             {
               role: 'system',
@@ -89,11 +94,13 @@ Make this educational and engaging, helping the student learn from their mistake
 
       // Extract related facts from the explanation (simple approach - split by numbered points)
       const relatedFacts = this.extractRelatedFacts(explanation);
+      const commonness = this.extractCommonness(explanation);
 
       return {
         explanation,
         sources,
-        relatedFacts
+        relatedFacts,
+        commonness
       };
     } catch (error) {
       console.error('Error generating explanation:', error);
@@ -101,7 +108,8 @@ Make this educational and engaging, helping the student learn from their mistake
       return {
         explanation: `The correct answer is ${correctAnswer}. This is a common Jeopardy topic that appears frequently in trivia competitions.`,
         sources: [],
-        relatedFacts: []
+        relatedFacts: [],
+        commonness: 'common' as const
       };
     }
   }
@@ -135,7 +143,7 @@ Focus on information that would be valuable for someone preparing for Jeopardy, 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-sonar-small-128k-online',
+          model: 'sonar',
           messages: [
             {
               role: 'system',
@@ -244,6 +252,20 @@ Focus on information that would be valuable for someone preparing for Jeopardy, 
     }
     
     return topics.slice(0, 8); // Limit to 8 related topics
+  }
+
+  private extractCommonness(content: string): 'very_common' | 'common' | 'uncommon' | 'rare' {
+    const lower = content.toLowerCase();
+    
+    if (lower.includes('very common') || lower.includes('extremely common') || lower.includes('frequently appears')) {
+      return 'very_common';
+    } else if (lower.includes('uncommon') || lower.includes('less common') || lower.includes('infrequent')) {
+      return 'uncommon';
+    } else if (lower.includes('rare') || lower.includes('rarely') || lower.includes('seldom')) {
+      return 'rare';
+    } else {
+      return 'common'; // Default fallback
+    }
   }
 }
 

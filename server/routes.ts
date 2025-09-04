@@ -197,6 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         explanation: explanation.explanation,
         sources: explanation.sources,
         relatedFacts: explanation.relatedFacts,
+        commonness: explanation.commonness,
       });
 
       res.json(learningMaterial);
@@ -263,7 +264,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content: generatedMaterial.content,
         sources: generatedMaterial.sources,
         relatedTopics: generatedMaterial.relatedTopics,
-        difficulty: 3, // Default difficulty
       });
 
       res.json(studyMaterial);

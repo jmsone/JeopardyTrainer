@@ -261,7 +261,6 @@ export default function StudyPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Badge variant="secondary">{material.category}</Badge>
-                        <Badge variant="outline">Difficulty: {material.difficulty}/5</Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
                         {new Date(material.generatedAt).toLocaleDateString()}

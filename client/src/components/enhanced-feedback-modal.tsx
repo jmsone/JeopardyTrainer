@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, ExternalLink, BookOpen, Lightbulb, Loader2 } from "lucide-react";
+import { Check, X, ExternalLink, BookOpen, Lightbulb, Loader2, Star, TrendingUp, Zap, Gem } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { LearningMaterial } from "@shared/schema";
 
@@ -28,6 +28,21 @@ export default function EnhancedFeedbackModal({
   onNext 
 }: EnhancedFeedbackModalProps) {
   const [showLearningMaterial, setShowLearningMaterial] = useState(false);
+
+  const renderCommonnessIcon = (commonness: string | undefined) => {
+    switch (commonness) {
+      case 'very_common':
+        return <Star className="text-green-500" size={14} />;
+      case 'common':
+        return <TrendingUp className="text-blue-500" size={14} />;
+      case 'uncommon':
+        return <Zap className="text-orange-500" size={14} />;
+      case 'rare':
+        return <Gem className="text-purple-500" size={14} />;
+      default:
+        return <TrendingUp className="text-blue-500" size={14} />;
+    }
+  };
 
   // Generate learning material for incorrect/unsure answers
   const generateLearningMutation = useMutation<LearningMaterial>({
@@ -123,9 +138,17 @@ export default function EnhancedFeedbackModal({
                   </div>
                 ) : learningMaterial ? (
                   <div className="space-y-4">
-                    <div className="flex items-center">
-                      <Lightbulb className="mr-2 text-primary" size={20} />
-                      <h4 className="font-semibold">Learning Materials</h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Lightbulb className="mr-2 text-primary" size={20} />
+                        <h4 className="font-semibold">Learning Materials</h4>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {renderCommonnessIcon(learningMaterial.commonness)}
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {learningMaterial.commonness?.replace('_', ' ') || 'common'} topic
+                        </span>
+                      </div>
                     </div>
                     
                     {/* Explanation */}
