@@ -31,6 +31,48 @@ export default function EnhancedFeedbackModal({
 }: EnhancedFeedbackModalProps) {
   const [showLearningMaterial, setShowLearningMaterial] = useState(false);
 
+  const processContent = (content: string) => {
+    return content.split('\n').map((line, index) => {
+      const trimmed = line.trim();
+      
+      // Filter out unwanted sections
+      if (trimmed.toLowerCase().includes('why this is correct') || 
+          trimmed.length < 10 || 
+          trimmed.match(/^[A-Z][a-z]{1,4}$/) ||
+          trimmed.endsWith('...') ||
+          (trimmed.length < 50 && trimmed.split(' ').length < 5)) {
+        return null;
+      }
+      
+      // Handle bold headers
+      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
+      } 
+      // Handle bullet points with indentation
+      else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+        return <li key={index} className="ml-6 mb-1 text-sm list-disc">{trimmed.slice(1).trim()}</li>;
+      } 
+      // Handle inline bold text
+      else if (trimmed.includes('**')) {
+        const parts = trimmed.split('**');
+        return (
+          <p key={index} className="mb-1 text-sm leading-snug">
+            {parts.map((part, partIndex) => 
+              partIndex % 2 === 1 ? 
+                <strong key={partIndex} className="font-semibold">{part}</strong> : 
+                part
+            )}
+          </p>
+        );
+      } 
+      // Regular text
+      else if (trimmed.length > 0) {
+        return <p key={index} className="mb-1 text-sm leading-snug">{trimmed}</p>;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
   const renderCommonnessIcon = (commonness: string | undefined) => {
     switch (commonness) {
       case 'very_common':
@@ -178,45 +220,7 @@ export default function EnhancedFeedbackModal({
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <h5 className="font-medium mb-2">Learning Material</h5>
                       <div className="text-sm prose prose-sm max-w-none" data-testid="text-explanation">
-                        {(learningMaterial.explanation || '').split('\n').map((line, index) => {
-                          const trimmed = line.trim();
-                          
-                          // Filter out unwanted sections
-                          if (trimmed.toLowerCase().includes('why this is correct') || 
-                              trimmed.length < 10 || 
-                              trimmed.match(/^[A-Z][a-z]{1,4}$/) ||
-                              trimmed.endsWith('...') ||
-                              (trimmed.length < 50 && trimmed.split(' ').length < 5)) {
-                            return null;
-                          }
-                          
-                          // Handle bold headers
-                          if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-                            return <h4 key={index} className="font-semibold mt-3 mb-1 text-primary text-sm">{trimmed.slice(2, -2)}</h4>;
-                          } 
-                          // Handle bullet points with indentation
-                          else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-                            return <li key={index} className="ml-6 mb-1 text-sm list-disc">{trimmed.slice(1).trim()}</li>;
-                          } 
-                          // Handle inline bold text
-                          else if (trimmed.includes('**')) {
-                            const parts = trimmed.split('**');
-                            return (
-                              <p key={index} className="mb-1 text-sm leading-snug">
-                                {parts.map((part, partIndex) => 
-                                  partIndex % 2 === 1 ? 
-                                    <strong key={partIndex} className="font-semibold">{part}</strong> : 
-                                    part
-                                )}
-                              </p>
-                            );
-                          } 
-                          // Regular text
-                          else if (trimmed.length > 0) {
-                            return <p key={index} className="mb-1 text-sm leading-snug">{trimmed}</p>;
-                          }
-                          return null;
-                        })}
+                        {processContent(learningMaterial.explanation || '')}
                       </div>
                     </div>
 
@@ -225,10 +229,26 @@ export default function EnhancedFeedbackModal({
                       <div>
                         <h5 className="font-medium mb-2">Related Trivia Facts</h5>
                         <div className="space-y-2">
-                          {learningMaterial.relatedFacts.map((fact, index) => (
+                          {learningMaterial.relatedFacts
+                            .filter(fact => {
+                              const trimmed = fact.trim();
+                              return trimmed.length >= 10 && 
+                                     !trimmed.toLowerCase().includes('why this is correct') &&
+                                     !trimmed.endsWith('...') &&
+                                     !(trimmed.length < 50 && trimmed.split(' ').length < 5);
+                            })
+                            .map((fact, index) => (
                             <div key={index} className="bg-muted/30 p-2 rounded text-sm" data-testid={`related-fact-${index}`}>
                               <span className="inline-block w-1.5 h-1.5 bg-primary rounded-full mr-2"></span>
-                              {fact}
+                              <div className="inline">
+                                {fact.includes('**') ? (
+                                  fact.split('**').map((part, partIndex) => 
+                                    partIndex % 2 === 1 ? 
+                                      <strong key={partIndex} className="font-semibold">{part}</strong> : 
+                                      part
+                                  )
+                                ) : fact}
+                              </div>
                             </div>
                           ))}
                         </div>
