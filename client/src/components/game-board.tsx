@@ -1,16 +1,17 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Target, Zap, RotateCcw } from "lucide-react";
+import { Clock, Target, Zap, RotateCcw, Timer } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Category, QuestionWithCategory, CategoryStats } from "@shared/schema";
 
 interface GameBoardProps {
   onQuestionSelect: (questionId: string) => void;
   onRapidFire: () => void;
+  onAnytimeTest: () => void;
 }
 
-export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardProps) {
+export default function GameBoard({ onQuestionSelect, onRapidFire, onAnytimeTest }: GameBoardProps) {
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
@@ -130,14 +131,7 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
       {/* Quick Study Mode */}
       <Card className="p-4">
         <h3 className="font-bold mb-3">Study Modes</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <Button 
-            className="bg-accent text-accent-foreground p-4 h-auto hover:bg-accent/90 flex flex-col items-center"
-            data-testid="button-spaced-repetition"
-          >
-            <Clock className="mb-2 text-lg" />
-            <span className="font-medium text-xs">Spaced Rep.</span>
-          </Button>
+        <div className="grid grid-cols-2 gap-3">
           <Button 
             onClick={onRapidFire}
             className="bg-destructive text-destructive-foreground p-4 h-auto hover:bg-destructive/90 flex flex-col items-center"
@@ -145,6 +139,21 @@ export default function GameBoard({ onQuestionSelect, onRapidFire }: GameBoardPr
           >
             <Zap className="mb-2 text-lg" />
             <span className="font-medium text-xs">Rapid Fire</span>
+          </Button>
+          <Button 
+            onClick={onAnytimeTest}
+            className="bg-orange-600 text-white p-4 h-auto hover:bg-orange-700 flex flex-col items-center"
+            data-testid="button-anytime-test"
+          >
+            <Timer className="mb-2 text-lg" />
+            <span className="font-medium text-xs">Anytime! Test</span>
+          </Button>
+          <Button 
+            className="bg-accent text-accent-foreground p-4 h-auto hover:bg-accent/90 flex flex-col items-center"
+            data-testid="button-spaced-repetition"
+          >
+            <Clock className="mb-2 text-lg" />
+            <span className="font-medium text-xs">Spaced Rep.</span>
           </Button>
           <Button 
             className="bg-primary text-primary-foreground p-4 h-auto hover:bg-primary/90 flex flex-col items-center"

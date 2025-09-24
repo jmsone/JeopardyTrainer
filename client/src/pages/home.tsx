@@ -9,7 +9,7 @@ import FeedbackModal from "@/components/feedback-modal";
 import { Trophy, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-type Screen = "game" | "question" | "rapid-fire" | "rapid-fire-settings" | "stats" | "profile";
+type Screen = "game" | "question" | "rapid-fire" | "rapid-fire-settings" | "anytime-test" | "stats" | "profile";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("game");
@@ -38,6 +38,10 @@ export default function Home() {
     setCurrentScreen("rapid-fire-settings");
   };
 
+  const handleAnytimeTest = () => {
+    setCurrentScreen("anytime-test");
+  };
+
   const handleRapidFireStart = (settings: { selectedCategories: string[]; questionCount: number }) => {
     setRapidFireSettings(settings);
     setCurrentScreen("rapid-fire");
@@ -57,7 +61,7 @@ export default function Home() {
   const renderScreen = () => {
     switch (currentScreen) {
       case "game":
-        return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} />;
+        return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} onAnytimeTest={handleAnytimeTest} />;
       case "question":
         return selectedQuestion ? (
           <QuestionView 
@@ -70,10 +74,12 @@ export default function Home() {
         return <RapidFireSettings onStart={handleRapidFireStart} onBack={() => setCurrentScreen("game")} />;
       case "rapid-fire":
         return <RapidFireMode settings={rapidFireSettings} onBack={() => setCurrentScreen("game")} />;
+      case "anytime-test":
+        return <RapidFireMode isAnytimeTest={true} onBack={() => setCurrentScreen("game")} />;
       case "stats":
         return <StatsDashboard />;
       default:
-        return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} />;
+        return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} onAnytimeTest={handleAnytimeTest} />;
     }
   };
 

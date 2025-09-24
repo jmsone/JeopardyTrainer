@@ -10,9 +10,10 @@ import type { QuestionWithCategory } from "@shared/schema";
 interface RapidFireModeProps {
   settings?: { selectedCategories: string[]; questionCount: number };
   onBack: () => void;
+  isAnytimeTest?: boolean;
 }
 
-export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) {
+export default function RapidFireMode({ settings, onBack, isAnytimeTest = false }: RapidFireModeProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [sessionStats, setSessionStats] = useState({
@@ -20,30 +21,69 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
     incorrect: 0,
     unsure: 0,
   });
+  const [timeRemaining, setTimeRemaining] = useState(15); // 15 seconds for Anytime! Test
+  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  const [testAttemptId, setTestAttemptId] = useState<string | null>(null);
 
   const restartSession = () => {
     setCurrentQuestionIndex(0);
     setShowAnswer(false);
     setSessionStats({ correct: 0, incorrect: 0, unsure: 0 });
-    queryClient.invalidateQueries({ queryKey: ["/api/questions/rapid-fire", settings] });
+    setTimeRemaining(15);
+    setQuestionStartTime(null);
+    setTestAttemptId(null);
+    const queryKey = isAnytimeTest ? ["/api/anytime-test-questions"] : ["/api/questions/rapid-fire", settings];
+    queryClient.invalidateQueries({ queryKey });
   };
 
   const { data: questions, isLoading } = useQuery<QuestionWithCategory[]>({
-    queryKey: ["/api/questions/rapid-fire", settings],
+    queryKey: isAnytimeTest ? ["/api/anytime-test-questions"] : ["/api/questions/rapid-fire", settings],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (settings?.questionCount) {
-        params.append('limit', settings.questionCount.toString());
+      if (isAnytimeTest) {
+        const response = await fetch('/api/anytime-test-questions');
+        if (!response.ok) throw new Error('Failed to fetch anytime test questions');
+        return response.json();
+      } else {
+        const params = new URLSearchParams();
+        if (settings?.questionCount) {
+          params.append('limit', settings.questionCount.toString());
+        }
+        if (settings?.selectedCategories && settings.selectedCategories.length > 0) {
+          params.append('categories', settings.selectedCategories.join(','));
+        }
+        
+        const response = await fetch(`/api/questions/rapid-fire?${params}`);
+        if (!response.ok) throw new Error('Failed to fetch questions');
+        return response.json();
       }
-      if (settings?.selectedCategories && settings.selectedCategories.length > 0) {
-        params.append('categories', settings.selectedCategories.join(','));
-      }
-      
-      const response = await fetch(`/api/questions/rapid-fire?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch questions');
-      return response.json();
     },
   });
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!isAnytimeTest || showAnswer || !questionStartTime) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time expired - auto-advance with "unsure" assessment
+          handleSelfAssessment("unsure", true);
+          return 15;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isAnytimeTest, showAnswer, questionStartTime, currentQuestionIndex]);
+
+  // Start timer when question loads
+  useEffect(() => {
+    if (isAnytimeTest && questions && currentQuestionIndex < questions.length) {
+      setTimeRemaining(15);
+      setQuestionStartTime(new Date());
+    }
+  }, [isAnytimeTest, questions, currentQuestionIndex]);
 
   const submitAnswerMutation = useMutation({
     mutationFn: async (data: {
@@ -52,21 +92,29 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
       userAnswer: string;
       timeSpent: number;
       selfAssessment: "correct" | "incorrect" | "unsure";
+      mode?: "game" | "rapid_fire" | "anytime_test";
+      sessionId?: string;
     }) => {
       return apiRequest("POST", "/api/progress", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/answered-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/readiness"] });
     },
   });
 
   const currentQuestion = questions?.[currentQuestionIndex];
-  const totalQuestions = questions?.length || 0;
+  const totalQuestions = isAnytimeTest ? 50 : (questions?.length || 0);
   const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
 
-  const handleSelfAssessment = async (assessment: "correct" | "incorrect" | "unsure") => {
+  const handleSelfAssessment = async (assessment: "correct" | "incorrect" | "unsure", isAutoAdvance = false) => {
     if (!currentQuestion) return;
+
+    // Calculate time spent
+    const timeSpent = questionStartTime 
+      ? Math.round((new Date().getTime() - questionStartTime.getTime()) / 1000)
+      : (isAnytimeTest ? 15 : 30);
 
     // Update session stats
     setSessionStats(prev => ({
@@ -79,14 +127,20 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
       questionId: currentQuestion.id,
       correct: assessment === "correct",
       userAnswer: "",
-      timeSpent: 30, // Default time for rapid-fire
+      timeSpent,
       selfAssessment: assessment,
+      mode: isAnytimeTest ? "anytime_test" : "rapid_fire",
+      sessionId: testAttemptId || undefined,
     });
 
     // Move to next question or finish
     if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setShowAnswer(false);
+      if (isAnytimeTest) {
+        setTimeRemaining(15);
+        setQuestionStartTime(new Date());
+      }
     } else {
       // Session complete - increment to trigger completion UI
       setCurrentQuestionIndex(prev => prev + 1);
@@ -168,10 +222,20 @@ export default function RapidFireMode({ settings, onBack }: RapidFireModeProps) 
           Back
         </Button>
         <div className="text-right">
-          <div className="text-sm text-muted-foreground">Rapid Fire Mode</div>
+          <div className="text-sm text-muted-foreground">
+            {isAnytimeTest ? "Anytime! Test" : "Rapid Fire Mode"}
+          </div>
           <div className="font-bold" data-testid="text-question-counter">
             Question {currentQuestionIndex + 1} of {totalQuestions}
           </div>
+          {isAnytimeTest && !showAnswer && (
+            <div className="flex items-center justify-end mt-1">
+              <Clock className="w-4 h-4 mr-1" />
+              <span className={`font-bold ${timeRemaining <= 5 ? 'text-red-500' : 'text-primary'}`} data-testid="timer-countdown">
+                {timeRemaining}s
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
