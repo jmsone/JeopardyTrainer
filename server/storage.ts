@@ -6,6 +6,10 @@ import {
   type LearningMaterial,
   type StudyMaterial,
   type TestAttempt,
+  type Achievement,
+  type UserAchievement,
+  type Notification,
+  type UserGoals,
   type InsertCategory,
   type InsertQuestion,
   type InsertUserProgress,
@@ -13,12 +17,20 @@ import {
   type InsertLearningMaterial,
   type InsertStudyMaterial,
   type InsertTestAttempt,
+  type InsertAchievement,
+  type InsertUserAchievement,
+  type InsertNotification,
+  type InsertUserGoals,
   type QuestionWithCategory,
   type QuestionWithLearning,
   type StudyReview,
   type CategoryStats,
   type DailyStats,
-  type ReadinessScore
+  type ReadinessScore,
+  type StreakInfo,
+  type AchievementWithProgress,
+  type GamificationStats,
+  type NotificationWithAction
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -78,6 +90,32 @@ export interface IStorage {
     currentStreak: number;
     totalStudyTime: number;
   }>;
+
+  // Gamification - Achievements
+  getAchievements(): Promise<Achievement[]>;
+  createAchievement(achievement: InsertAchievement): Promise<Achievement>;
+  getUserAchievements(): Promise<UserAchievement[]>;
+  getUserAchievementByKey(key: string): Promise<UserAchievement | undefined>;
+  createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
+  updateUserAchievement(id: string, data: Partial<UserAchievement>): Promise<UserAchievement>;
+  getAchievementsWithProgress(): Promise<AchievementWithProgress[]>;
+  awardAchievement(achievementKey: string, progress?: number): Promise<{ achievement: Achievement; notification: Notification } | null>;
+
+  // Gamification - Notifications
+  getNotifications(unreadOnly?: boolean): Promise<NotificationWithAction[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: string): Promise<void>;
+  getUnreadNotificationCount(): Promise<number>;
+
+  // Gamification - Goals and Streaks
+  getUserGoals(): Promise<UserGoals>;
+  updateUserGoals(goals: Partial<InsertUserGoals>): Promise<UserGoals>;
+  getStreakInfo(): Promise<StreakInfo>;
+  getGamificationStats(): Promise<GamificationStats>;
+
+  // Achievement Detection
+  checkAndAwardAchievements(progressData: UserProgress): Promise<Notification[]>;
+  evaluateAchievements(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -88,6 +126,21 @@ export class MemStorage implements IStorage {
   private learningMaterials: Map<string, LearningMaterial> = new Map();
   private studyMaterials: Map<string, StudyMaterial> = new Map();
   private testAttempts: Map<string, TestAttempt> = new Map();
+  
+  // Gamification storage
+  private achievements: Map<string, Achievement> = new Map();
+  private userAchievements: Map<string, UserAchievement> = new Map();
+  private notifications: Map<string, Notification> = new Map();
+  private userGoals: UserGoals = {
+    id: randomUUID(),
+    dailyQuestionGoal: 10,
+    weeklyStreakGoal: 7,
+    remindersEnabled: false,
+    reminderHour: 19,
+    quietHoursStart: 22,
+    quietHoursEnd: 8,
+    updatedAt: new Date(),
+  };
 
   constructor() {
     this.initializeData();
@@ -183,6 +236,200 @@ export class MemStorage implements IStorage {
         };
         this.spacedRepetition.set(srData.id, srData);
       });
+    });
+
+    // Initialize achievement catalog
+    this.initializeAchievements();
+  }
+
+  private initializeAchievements() {
+    const achievements: InsertAchievement[] = [
+      // Milestone achievements
+      {
+        key: "first_clue",
+        name: "First Clue! 🎯",
+        description: "Answer your very first Jeopardy question",
+        icon: "🎯",
+        category: "milestone",
+        tier: "bronze",
+        points: 10,
+        requirements: JSON.stringify({ totalQuestions: 1 })
+      },
+      {
+        key: "getting_started", 
+        name: "Getting Started 📚",
+        description: "Answer 5 questions correctly",
+        icon: "📚",
+        category: "milestone", 
+        tier: "bronze",
+        points: 25,
+        requirements: JSON.stringify({ correctAnswers: 5 })
+      },
+      {
+        key: "quiz_enthusiast",
+        name: "Quiz Enthusiast 🧠", 
+        description: "Answer 25 questions total",
+        icon: "🧠",
+        category: "milestone",
+        tier: "silver", 
+        points: 50,
+        requirements: JSON.stringify({ totalQuestions: 25 })
+      },
+      {
+        key: "jeopardy_scholar",
+        name: "Jeopardy Scholar 🎓",
+        description: "Answer 100 questions total",
+        icon: "🎓", 
+        category: "milestone",
+        tier: "gold",
+        points: 100,
+        requirements: JSON.stringify({ totalQuestions: 100 })
+      },
+
+      // Streak achievements
+      {
+        key: "daily_habit",
+        name: "Daily Habit 🔥",
+        description: "Maintain a 3-day streak",
+        icon: "🔥",
+        category: "streak",
+        tier: "bronze", 
+        points: 30,
+        requirements: JSON.stringify({ dailyStreak: 3 })
+      },
+      {
+        key: "week_warrior",
+        name: "Week Warrior ⚡",
+        description: "Maintain a 7-day streak", 
+        icon: "⚡",
+        category: "streak",
+        tier: "silver",
+        points: 75,
+        requirements: JSON.stringify({ dailyStreak: 7 })
+      },
+      {
+        key: "streak_master",
+        name: "Streak Master 🌟",
+        description: "Maintain a 30-day streak",
+        icon: "🌟", 
+        category: "streak",
+        tier: "gold",
+        points: 200,
+        requirements: JSON.stringify({ dailyStreak: 30 })
+      },
+
+      // Mastery achievements
+      {
+        key: "category_specialist",
+        name: "Category Specialist 🏆",
+        description: "Achieve 80%+ accuracy in any category with 10+ questions",
+        icon: "🏆",
+        category: "mastery", 
+        tier: "silver",
+        points: 60,
+        requirements: JSON.stringify({ categoryAccuracy: 80, categoryQuestions: 10 })
+      },
+      {
+        key: "well_rounded",
+        name: "Well Rounded 🌈",
+        description: "Practice in 6 different categories",
+        icon: "🌈",
+        category: "mastery",
+        tier: "silver", 
+        points: 50,
+        requirements: JSON.stringify({ categoriesCovered: 6 })
+      },
+      {
+        key: "perfectionist", 
+        name: "Perfectionist 💎",
+        description: "Get 10 questions correct in a row",
+        icon: "💎",
+        category: "mastery",
+        tier: "gold",
+        points: 80,
+        requirements: JSON.stringify({ perfectStreak: 10 })
+      },
+
+      // Speed achievements
+      {
+        key: "quick_thinker",
+        name: "Quick Thinker ⚡",
+        description: "Answer 5 questions in under 5 seconds each",
+        icon: "⚡", 
+        category: "speed",
+        tier: "bronze",
+        points: 40,
+        requirements: JSON.stringify({ fastAnswers: 5, timeLimit: 5 })
+      },
+      {
+        key: "speed_demon",
+        name: "Speed Demon 🏃",
+        description: "Answer 20 questions in under 3 seconds each", 
+        icon: "🏃",
+        category: "speed",
+        tier: "gold",
+        points: 100,
+        requirements: JSON.stringify({ fastAnswers: 20, timeLimit: 3 })
+      },
+
+      // Test achievements
+      {
+        key: "test_taker", 
+        name: "Test Taker 📝",
+        description: "Complete your first Anytime! Test",
+        icon: "📝",
+        category: "milestone",
+        tier: "silver",
+        points: 75,
+        requirements: JSON.stringify({ anytimeTestsCompleted: 1 })
+      },
+      {
+        key: "test_master",
+        name: "Test Master 👑",
+        description: "Score 80%+ on an Anytime! Test",
+        icon: "👑", 
+        category: "mastery",
+        tier: "platinum",
+        points: 150,
+        requirements: JSON.stringify({ anytimeTestScore: 80 })
+      },
+
+      // Readiness achievements
+      {
+        key: "test_ready",
+        name: "Test Ready! 🎯",
+        description: "Reach 70% overall readiness",
+        icon: "🎯",
+        category: "milestone",
+        tier: "silver", 
+        points: 100,
+        requirements: JSON.stringify({ readinessScore: 70 })
+      },
+      {
+        key: "highly_prepared", 
+        name: "Highly Prepared 🚀",
+        description: "Reach 80% overall readiness",
+        icon: "🚀",
+        category: "milestone",
+        tier: "gold",
+        points: 150,
+        requirements: JSON.stringify({ readinessScore: 80 })
+      },
+      {
+        key: "jeopardy_master",
+        name: "Jeopardy Master 👑",
+        description: "Reach 90% overall readiness", 
+        icon: "👑",
+        category: "milestone",
+        tier: "platinum",
+        points: 250,
+        requirements: JSON.stringify({ readinessScore: 90 })
+      }
+    ];
+
+    achievements.forEach(ach => {
+      const achievement: Achievement = { ...ach, id: randomUUID() };
+      this.achievements.set(achievement.key, achievement);
     });
   }
 
@@ -739,6 +986,321 @@ export class MemStorage implements IStorage {
       testReady,
       lastUpdated: now
     };
+  }
+
+  // Gamification methods implementation
+  async getAchievements(): Promise<Achievement[]> {
+    return Array.from(this.achievements.values());
+  }
+
+  async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
+    const id = randomUUID();
+    const newAchievement: Achievement = { ...achievement, id };
+    this.achievements.set(achievement.key, newAchievement);
+    return newAchievement;
+  }
+
+  async getUserAchievements(): Promise<UserAchievement[]> {
+    return Array.from(this.userAchievements.values());
+  }
+
+  async getUserAchievementByKey(key: string): Promise<UserAchievement | undefined> {
+    return Array.from(this.userAchievements.values()).find(ua => ua.achievementKey === key);
+  }
+
+  async createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
+    const id = randomUUID();
+    const newUserAchievement: UserAchievement = {
+      ...userAchievement,
+      id,
+      createdAt: new Date(),
+    };
+    this.userAchievements.set(id, newUserAchievement);
+    return newUserAchievement;
+  }
+
+  async updateUserAchievement(id: string, data: Partial<UserAchievement>): Promise<UserAchievement> {
+    const existing = this.userAchievements.get(id);
+    if (!existing) {
+      throw new Error("UserAchievement not found");
+    }
+    const updated = { ...existing, ...data };
+    this.userAchievements.set(id, updated);
+    return updated;
+  }
+
+  async getAchievementsWithProgress(): Promise<AchievementWithProgress[]> {
+    const achievements = await this.getAchievements();
+    const userAchievements = await this.getUserAchievements();
+    
+    return achievements.map(achievement => {
+      const userAchievement = userAchievements.find(ua => ua.achievementKey === achievement.key);
+      
+      return {
+        ...achievement,
+        progress: userAchievement?.progress || 0,
+        maxProgress: userAchievement?.maxProgress || 1,
+        isEarned: userAchievement?.isEarned || false,
+        earnedAt: userAchievement?.earnedAt,
+        progressPercent: userAchievement ? (userAchievement.progress / userAchievement.maxProgress) * 100 : 0,
+      };
+    });
+  }
+
+  async awardAchievement(achievementKey: string, progress?: number): Promise<{ achievement: Achievement; notification: Notification } | null> {
+    const achievement = this.achievements.get(achievementKey);
+    if (!achievement) return null;
+
+    let userAchievement = await this.getUserAchievementByKey(achievementKey);
+    
+    if (!userAchievement) {
+      // Create new user achievement
+      userAchievement = await this.createUserAchievement({
+        achievementKey,
+        progress: progress || 1,
+        maxProgress: 1,
+        isEarned: false,
+      });
+    } else if (userAchievement.isEarned) {
+      return null; // Already earned
+    }
+
+    // Update progress
+    const newProgress = Math.min(userAchievement.progress + (progress || 1), userAchievement.maxProgress);
+    const isEarned = newProgress >= userAchievement.maxProgress;
+
+    await this.updateUserAchievement(userAchievement.id, {
+      progress: newProgress,
+      isEarned,
+      earnedAt: isEarned ? new Date() : undefined,
+    });
+
+    if (isEarned) {
+      // Create notification
+      const notification = await this.createNotification({
+        type: "achievement",
+        title: "Achievement Unlocked!",
+        message: `${achievement.name}: ${achievement.description}`,
+        icon: achievement.icon,
+        priority: "high",
+      });
+
+      return { achievement, notification };
+    }
+
+    return null;
+  }
+
+  async getNotifications(unreadOnly?: boolean): Promise<NotificationWithAction[]> {
+    const notifications = Array.from(this.notifications.values());
+    const filtered = unreadOnly ? notifications.filter(n => !n.isRead) : notifications;
+    
+    return filtered
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map(notification => ({
+        ...notification,
+        canDismiss: true,
+        timeAgo: this.formatTimeAgo(notification.createdAt),
+        achievementData: notification.type === "achievement" ? 
+          this.achievements.get(notification.message.split(":")[0]?.trim()) : undefined,
+      }));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const id = randomUUID();
+    const newNotification: Notification = {
+      ...notification,
+      id,
+      createdAt: new Date(),
+    };
+    this.notifications.set(id, newNotification);
+    return newNotification;
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    const notification = this.notifications.get(id);
+    if (notification) {
+      notification.isRead = true;
+      this.notifications.set(id, notification);
+    }
+  }
+
+  async getUnreadNotificationCount(): Promise<number> {
+    return Array.from(this.notifications.values()).filter(n => !n.isRead).length;
+  }
+
+  async getUserGoals(): Promise<UserGoals> {
+    return this.userGoals;
+  }
+
+  async updateUserGoals(goals: Partial<InsertUserGoals>): Promise<UserGoals> {
+    this.userGoals = {
+      ...this.userGoals,
+      ...goals,
+      updatedAt: new Date(),
+    };
+    return this.userGoals;
+  }
+
+  async getStreakInfo(): Promise<StreakInfo> {
+    const dailyStats = await this.getDailyStats(365); // Get full year for accurate streaks
+    const today = new Date().toISOString().split('T')[0];
+    const userGoals = await this.getUserGoals();
+    
+    // Calculate streaks
+    let dailyStreak = 0;
+    let longestDailyStreak = 0;
+    let currentStreak = 0;
+    
+    // Sort daily stats by date
+    const sortedStats = dailyStats.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Check daily streak from today backwards
+    for (let i = 0; i < sortedStats.length; i++) {
+      const stat = sortedStats[i];
+      if (stat.questionsAnswered > 0) {
+        if (i === 0 || dailyStreak === i) { // Continuous streak
+          dailyStreak++;
+          currentStreak++;
+        } else {
+          break;
+        }
+      } else if (i === 0) {
+        break; // Today has no activity
+      }
+    }
+    
+    // Calculate longest streak
+    let tempStreak = 0;
+    for (const stat of sortedStats.reverse()) {
+      if (stat.questionsAnswered > 0) {
+        tempStreak++;
+        longestDailyStreak = Math.max(longestDailyStreak, tempStreak);
+      } else {
+        tempStreak = 0;
+      }
+    }
+
+    const todayStat = dailyStats.find(s => s.date === today);
+    const questionsToday = todayStat?.questionsAnswered || 0;
+    const goalProgress = Math.min((questionsToday / userGoals.dailyQuestionGoal) * 100, 100);
+
+    return {
+      dailyStreak,
+      weeklyStreak: Math.floor(dailyStreak / 7), // Simple weekly calculation
+      monthlyStreak: Math.floor(dailyStreak / 30), // Simple monthly calculation
+      longestDailyStreak,
+      lastActiveDate: sortedStats.find(s => s.questionsAnswered > 0)?.date || today,
+      todayComplete: questionsToday >= userGoals.dailyQuestionGoal,
+      questionsToday,
+      goalProgress,
+    };
+  }
+
+  async getGamificationStats(): Promise<GamificationStats> {
+    const achievements = await this.getAchievementsWithProgress();
+    const earnedAchievements = achievements.filter(a => a.isEarned);
+    const streakInfo = await this.getStreakInfo();
+    const unreadCount = await this.getUnreadNotificationCount();
+    
+    const totalPoints = earnedAchievements.reduce((sum, a) => sum + a.points, 0);
+    
+    // Determine tier based on points
+    let currentTier = "Bronze";
+    let nextTierProgress = 0;
+    
+    if (totalPoints >= 1000) {
+      currentTier = "Platinum";
+      nextTierProgress = 100;
+    } else if (totalPoints >= 500) {
+      currentTier = "Gold";
+      nextTierProgress = ((totalPoints - 500) / 500) * 100;
+    } else if (totalPoints >= 200) {
+      currentTier = "Silver";
+      nextTierProgress = ((totalPoints - 200) / 300) * 100;
+    } else {
+      nextTierProgress = (totalPoints / 200) * 100;
+    }
+
+    return {
+      totalPoints,
+      achievementsEarned: earnedAchievements.length,
+      totalAchievements: achievements.length,
+      currentTier,
+      nextTierProgress: Math.round(nextTierProgress),
+      streakInfo,
+      recentAchievements: earnedAchievements
+        .sort((a, b) => (b.earnedAt?.getTime() || 0) - (a.earnedAt?.getTime() || 0))
+        .slice(0, 5),
+      unreadNotifications: unreadCount,
+    };
+  }
+
+  async checkAndAwardAchievements(progressData: UserProgress): Promise<Notification[]> {
+    const notifications: Notification[] = [];
+    const overallStats = await this.getOverallStats();
+    const categoryStats = await this.getCategoryStats();
+    const streakInfo = await this.getStreakInfo();
+    const readiness = await this.getReadinessScore();
+    const testAttempts = await this.getTestAttempts("anytime_test");
+    
+    // Check various achievement conditions
+    const checks = [
+      // Milestone achievements
+      { key: "first_clue", condition: overallStats.totalQuestions >= 1 },
+      { key: "getting_started", condition: overallStats.totalQuestions >= 5 && overallStats.overallAccuracy >= 50 },
+      { key: "quiz_enthusiast", condition: overallStats.totalQuestions >= 25 },
+      { key: "jeopardy_scholar", condition: overallStats.totalQuestions >= 100 },
+      
+      // Streak achievements  
+      { key: "daily_habit", condition: streakInfo.dailyStreak >= 3 },
+      { key: "week_warrior", condition: streakInfo.dailyStreak >= 7 },
+      { key: "streak_master", condition: streakInfo.dailyStreak >= 30 },
+      
+      // Mastery achievements
+      { key: "category_specialist", condition: categoryStats.some(c => c.accuracy >= 80 && c.totalQuestions >= 10) },
+      { key: "well_rounded", condition: categoryStats.filter(c => c.totalQuestions >= 5).length >= 6 },
+      
+      // Test achievements
+      { key: "test_taker", condition: testAttempts.length >= 1 },
+      { key: "test_master", condition: testAttempts.some(t => (t.correctCount / t.totalQuestions) * 100 >= 80) },
+      
+      // Readiness achievements
+      { key: "test_ready", condition: readiness.overallScore >= 70 },
+      { key: "highly_prepared", condition: readiness.overallScore >= 80 },
+      { key: "jeopardy_master", condition: readiness.overallScore >= 90 },
+    ];
+
+    for (const check of checks) {
+      if (check.condition) {
+        const result = await this.awardAchievement(check.key);
+        if (result) {
+          notifications.push(result.notification);
+        }
+      }
+    }
+
+    return notifications;
+  }
+
+  async evaluateAchievements(): Promise<void> {
+    // This method can be called periodically to check all achievements
+    // For now, it's implemented as part of checkAndAwardAchievements
+    // but could be expanded for more complex evaluation logic
+  }
+
+  private formatTimeAgo(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   }
 }
 
