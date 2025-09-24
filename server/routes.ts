@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema, insertTestAttemptSchema } from "@shared/schema";
+import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema, insertTestAttemptSchema, insertUserGoalsSchema } from "@shared/schema";
 import { z } from "zod";
 import { perplexityService } from "./perplexity-service";
 
@@ -319,6 +319,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to get anytime test questions:", error);
       res.status(500).json({ message: "Failed to fetch anytime test questions" });
+    }
+  });
+
+  // ===== GAMIFICATION API ROUTES =====
+
+  // Achievements
+  app.get("/api/achievements", async (req, res) => {
+    try {
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (error) {
+      console.error("Failed to get achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  app.get("/api/achievements/progress", async (req, res) => {
+    try {
+      const achievementsWithProgress = await storage.getAchievementsWithProgress();
+      res.json(achievementsWithProgress);
+    } catch (error) {
+      console.error("Failed to get achievements with progress:", error);
+      res.status(500).json({ message: "Failed to fetch achievements with progress" });
+    }
+  });
+
+  app.get("/api/user-achievements", async (req, res) => {
+    try {
+      const userAchievements = await storage.getUserAchievements();
+      res.json(userAchievements);
+    } catch (error) {
+      console.error("Failed to get user achievements:", error);
+      res.status(500).json({ message: "Failed to fetch user achievements" });
+    }
+  });
+
+  // Notifications
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const { unread } = req.query;
+      const notifications = await storage.getNotifications(unread === 'true');
+      res.json(notifications);
+    } catch (error) {
+      console.error("Failed to get notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markNotificationRead(id);
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", async (req, res) => {
+    try {
+      const count = await storage.getUnreadNotificationCount();
+      res.json({ count });
+    } catch (error) {
+      console.error("Failed to get unread notification count:", error);
+      res.status(500).json({ message: "Failed to get unread notification count" });
+    }
+  });
+
+  // User Goals
+  app.get("/api/goals", async (req, res) => {
+    try {
+      const goals = await storage.getUserGoals();
+      res.json(goals);
+    } catch (error) {
+      console.error("Failed to get user goals:", error);
+      res.status(500).json({ message: "Failed to fetch user goals" });
+    }
+  });
+
+  app.patch("/api/goals", async (req, res) => {
+    try {
+      const validatedData = insertUserGoalsSchema.partial().parse(req.body);
+      const updatedGoals = await storage.updateUserGoals(validatedData);
+      res.json(updatedGoals);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid goal data", errors: error.errors });
+        return;
+      }
+      console.error("Failed to update user goals:", error);
+      res.status(500).json({ message: "Failed to update user goals" });
+    }
+  });
+
+  // Streaks and Stats
+  app.get("/api/streaks", async (req, res) => {
+    try {
+      const streakInfo = await storage.getStreakInfo();
+      res.json(streakInfo);
+    } catch (error) {
+      console.error("Failed to get streak info:", error);
+      res.status(500).json({ message: "Failed to fetch streak info" });
+    }
+  });
+
+  app.get("/api/gamification-stats", async (req, res) => {
+    try {
+      const stats = await storage.getGamificationStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Failed to get gamification stats:", error);
+      res.status(500).json({ message: "Failed to fetch gamification stats" });
+    }
+  });
+
+  // Achievement Evaluation (trigger manually or after user actions)
+  app.post("/api/evaluate-achievements", async (req, res) => {
+    try {
+      await storage.evaluateAchievements();
+      res.json({ message: "Achievement evaluation completed" });
+    } catch (error) {
+      console.error("Failed to evaluate achievements:", error);
+      res.status(500).json({ message: "Failed to evaluate achievements" });
+    }
+  });
+
+  // Award specific achievement (admin/testing endpoint)
+  app.post("/api/achievements/:key/award", async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { progress } = req.body;
+      const result = await storage.awardAchievement(key, progress);
+      
+      if (result) {
+        res.json({ 
+          message: "Achievement awarded successfully", 
+          achievement: result.achievement,
+          notification: result.notification 
+        });
+      } else {
+        res.json({ message: "Achievement not found or already earned" });
+      }
+    } catch (error) {
+      console.error("Failed to award achievement:", error);
+      res.status(500).json({ message: "Failed to award achievement" });
     }
   });
 
