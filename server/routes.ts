@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema } from "@shared/schema";
+import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema, insertTestAttemptSchema } from "@shared/schema";
 import { z } from "zod";
 import { perplexityService } from "./perplexity-service";
 
@@ -270,6 +270,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error generating study material:', error);
       res.status(500).json({ message: "Failed to generate study material" });
+    }
+  });
+
+  // Readiness Score
+  app.get("/api/readiness", async (req, res) => {
+    try {
+      const readinessScore = await storage.getReadinessScore();
+      res.json(readinessScore);
+    } catch (error) {
+      console.error("Failed to get readiness score:", error);
+      res.status(500).json({ message: "Failed to calculate readiness score" });
+    }
+  });
+
+  // Test Attempts
+  app.post("/api/test-attempts", async (req, res) => {
+    try {
+      const validatedData = insertTestAttemptSchema.parse(req.body);
+      const testAttempt = await storage.createTestAttempt(validatedData);
+      res.json(testAttempt);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid test attempt data", errors: error.errors });
+        return;
+      }
+      console.error("Failed to create test attempt:", error);
+      res.status(500).json({ message: "Failed to create test attempt" });
+    }
+  });
+
+  app.get("/api/test-attempts", async (req, res) => {
+    try {
+      const { mode } = req.query;
+      const testAttempts = await storage.getTestAttempts(mode as "anytime_test" | undefined);
+      res.json(testAttempts);
+    } catch (error) {
+      console.error("Failed to get test attempts:", error);
+      res.status(500).json({ message: "Failed to fetch test attempts" });
+    }
+  });
+
+  // Anytime Test Questions
+  app.get("/api/anytime-test-questions", async (req, res) => {
+    try {
+      const questions = await storage.getAnytimeTestSet();
+      res.json(questions);
+    } catch (error) {
+      console.error("Failed to get anytime test questions:", error);
+      res.status(500).json({ message: "Failed to fetch anytime test questions" });
     }
   });
 
