@@ -27,6 +27,8 @@ export const userProgress = pgTable("user_progress", {
   userAnswer: text("user_answer"),
   timeSpent: integer("time_spent"), // in seconds
   selfAssessment: varchar("self_assessment", { enum: ["correct", "incorrect", "unsure"] }).notNull().default("unsure"),
+  mode: varchar("mode", { enum: ["game", "rapid_fire", "anytime_test"] }).notNull().default("game"),
+  sessionId: varchar("session_id"), // Groups related questions (e.g., a single test attempt)
   answeredAt: timestamp("answered_at").notNull().defaultNow(),
 });
 
@@ -38,6 +40,17 @@ export const spacedRepetition = pgTable("spaced_repetition", {
   repetitions: integer("repetitions").notNull().default(0),
   nextReview: timestamp("next_review").notNull().defaultNow(),
   lastReviewed: timestamp("last_reviewed"),
+});
+
+export const testAttempts = pgTable("test_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  mode: varchar("mode", { enum: ["anytime_test"] }).notNull(),
+  correctCount: integer("correct_count").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
+  durationSeconds: integer("duration_seconds").notNull(),
+  startedAt: timestamp("started_at").notNull(),
+  finishedAt: timestamp("finished_at").notNull().defaultNow(),
 });
 
 export const learningMaterials = pgTable("learning_materials", {
@@ -73,6 +86,7 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).omit({
   answeredAt: true,
 }).extend({
   selfAssessment: z.enum(["correct", "incorrect", "unsure"]).optional(),
+  mode: z.enum(["game", "rapid_fire", "anytime_test"]).optional(),
 });
 
 export const insertSpacedRepetitionSchema = createInsertSchema(spacedRepetition).omit({
@@ -89,12 +103,18 @@ export const insertStudyMaterialSchema = createInsertSchema(studyMaterials).omit
   generatedAt: true,
 });
 
+export const insertTestAttemptSchema = createInsertSchema(testAttempts).omit({
+  id: true,
+  finishedAt: true,
+});
+
 export type Category = typeof categories.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type UserProgress = typeof userProgress.$inferSelect;
 export type SpacedRepetition = typeof spacedRepetition.$inferSelect;
 export type LearningMaterial = typeof learningMaterials.$inferSelect;
 export type StudyMaterial = typeof studyMaterials.$inferSelect;
+export type TestAttempt = typeof testAttempts.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
@@ -102,6 +122,7 @@ export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 export type InsertSpacedRepetition = z.infer<typeof insertSpacedRepetitionSchema>;
 export type InsertLearningMaterial = z.infer<typeof insertLearningMaterialSchema>;
 export type InsertStudyMaterial = z.infer<typeof insertStudyMaterialSchema>;
+export type InsertTestAttempt = z.infer<typeof insertTestAttemptSchema>;
 
 // Extended types for API responses
 export type QuestionWithCategory = Question & {
@@ -133,4 +154,37 @@ export type DailyStats = {
   correctAnswers: number;
   accuracy: number;
   studyTime: number;
+};
+
+// Readiness scoring types
+export type ReadinessComponent = {
+  name: string;
+  score: number;
+  weight: number;
+  description: string;
+};
+
+export type CategoryCoverage = {
+  categoryId: string;
+  categoryName: string;
+  accuracy: number;
+  recentQuestions: number;
+  weight: number;
+  covered: boolean;
+};
+
+export type ReadinessScore = {
+  overallScore: number;
+  letterGrade: "A" | "B" | "C" | "D" | "F";
+  components: ReadinessComponent[];
+  categoryBreadth: {
+    coveredCategories: number;
+    totalCategories: number;
+    requiredCategories: number;
+    breadthFactor: number;
+  };
+  categoryCoverage: CategoryCoverage[];
+  weakCategories: CategoryCoverage[];
+  testReady: boolean;
+  lastUpdated: Date;
 };
