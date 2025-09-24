@@ -5,17 +5,20 @@ import {
   type SpacedRepetition,
   type LearningMaterial,
   type StudyMaterial,
+  type TestAttempt,
   type InsertCategory,
   type InsertQuestion,
   type InsertUserProgress,
   type InsertSpacedRepetition,
   type InsertLearningMaterial,
   type InsertStudyMaterial,
+  type InsertTestAttempt,
   type QuestionWithCategory,
   type QuestionWithLearning,
   type StudyReview,
   type CategoryStats,
-  type DailyStats
+  type DailyStats,
+  type ReadinessScore
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -58,6 +61,14 @@ export interface IStorage {
   getStudyMaterialsByCategory(category: string): Promise<StudyMaterial[]>;
   createStudyMaterial(material: InsertStudyMaterial): Promise<StudyMaterial>;
   
+  // Test Attempts
+  createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
+  getTestAttempts(mode?: "anytime_test"): Promise<TestAttempt[]>;
+  getAnytimeTestSet(): Promise<QuestionWithCategory[]>;
+  
+  // Readiness Calculation
+  getReadinessScore(): Promise<ReadinessScore>;
+  
   // Statistics
   getCategoryStats(): Promise<CategoryStats[]>;
   getDailyStats(days: number): Promise<DailyStats[]>;
@@ -76,6 +87,7 @@ export class MemStorage implements IStorage {
   private spacedRepetition: Map<string, SpacedRepetition> = new Map();
   private learningMaterials: Map<string, LearningMaterial> = new Map();
   private studyMaterials: Map<string, StudyMaterial> = new Map();
+  private testAttempts: Map<string, TestAttempt> = new Map();
 
   constructor() {
     this.initializeData();
@@ -284,6 +296,8 @@ export class MemStorage implements IStorage {
     const progress: UserProgress = { 
       ...insertProgress, 
       id, 
+      mode: insertProgress.mode || "game",
+      sessionId: insertProgress.sessionId || null,
       answeredAt: new Date(),
       userAnswer: insertProgress.userAnswer || null,
       timeSpent: insertProgress.timeSpent || null,
@@ -312,7 +326,15 @@ export class MemStorage implements IStorage {
 
   async createSpacedRepetition(insertData: InsertSpacedRepetition): Promise<SpacedRepetition> {
     const id = randomUUID();
-    const data: SpacedRepetition = { ...insertData, id };
+    const data: SpacedRepetition = { 
+      ...insertData, 
+      id,
+      easeFactor: insertData.easeFactor ?? 2.5,
+      interval: insertData.interval ?? 1,
+      repetitions: insertData.repetitions ?? 0,
+      nextReview: insertData.nextReview ?? new Date(),
+      lastReviewed: insertData.lastReviewed ?? null
+    };
     this.spacedRepetition.set(id, data);
     return data;
   }
@@ -447,6 +469,7 @@ export class MemStorage implements IStorage {
     const material: LearningMaterial = { 
       ...insertMaterial, 
       id, 
+      commonness: insertMaterial.commonness || "common",
       generatedAt: new Date() 
     };
     this.learningMaterials.set(id, material);
@@ -491,11 +514,231 @@ export class MemStorage implements IStorage {
     const material: StudyMaterial = { 
       ...insertMaterial, 
       id, 
-      generatedAt: new Date(),
-      difficulty: insertMaterial.difficulty || 3
+      generatedAt: new Date()
     };
     this.studyMaterials.set(id, material);
     return material;
+  }
+
+  // Test Attempts implementation
+  async createTestAttempt(insertAttempt: InsertTestAttempt): Promise<TestAttempt> {
+    const id = randomUUID();
+    const attempt: TestAttempt = {
+      ...insertAttempt,
+      id,
+      finishedAt: new Date()
+    };
+    this.testAttempts.set(id, attempt);
+    return attempt;
+  }
+
+  async getTestAttempts(mode?: "anytime_test"): Promise<TestAttempt[]> {
+    const attempts = Array.from(this.testAttempts.values());
+    if (mode) {
+      return attempts.filter(attempt => attempt.mode === mode);
+    }
+    return attempts;
+  }
+
+  async getAnytimeTestSet(): Promise<QuestionWithCategory[]> {
+    // Get 50 questions with diverse category coverage
+    const categories = Array.from(this.categories.values());
+    const questions: QuestionWithCategory[] = [];
+    
+    // Try to get one question per category first
+    for (const category of categories) {
+      const categoryQuestions = Array.from(this.questions.values())
+        .filter(q => q.categoryId === category.id);
+      
+      if (categoryQuestions.length > 0) {
+        const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
+        questions.push({
+          ...randomQuestion,
+          category
+        });
+      }
+      
+      if (questions.length >= 50) break;
+    }
+    
+    // Fill remaining slots with random questions if needed
+    while (questions.length < 50) {
+      const allQuestions = Array.from(this.questions.values());
+      const usedIds = new Set(questions.map(q => q.id));
+      const availableQuestions = allQuestions.filter(q => !usedIds.has(q.id));
+      
+      if (availableQuestions.length === 0) break;
+      
+      const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+      const category = this.categories.get(randomQuestion.categoryId);
+      
+      if (category) {
+        questions.push({
+          ...randomQuestion,
+          category
+        });
+      }
+    }
+    
+    return questions.slice(0, 50);
+  }
+
+  async getReadinessScore(): Promise<ReadinessScore> {
+    const now = new Date();
+    const allProgress = await this.getUserProgress();
+    const testAttempts = await this.getTestAttempts("anytime_test");
+    const spacedRepetitionData = await this.getSpacedRepetitionData();
+    const categories = await this.getCategories();
+
+    // Time decay function: w = exp(-ageDays/halfLife)
+    const calculateTimeWeight = (date: Date, halfLifeDays: number): number => {
+      const ageDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+      return Math.exp(-ageDays / halfLifeDays);
+    };
+
+    // Component 1: Anytime! Test Performance (60%)
+    let anytimeTestScore = 0;
+    if (testAttempts.length > 0) {
+      const weightedAttempts = testAttempts.map(attempt => {
+        const accuracy = (attempt.correctCount / attempt.totalQuestions) * 100;
+        const weight = calculateTimeWeight(attempt.finishedAt, 21); // 21-day half-life
+        return { accuracy, weight };
+      });
+      
+      const totalWeight = weightedAttempts.reduce((sum, a) => sum + a.weight, 0);
+      if (totalWeight > 0) {
+        anytimeTestScore = weightedAttempts.reduce((sum, a) => sum + (a.accuracy * a.weight), 0) / totalWeight;
+      }
+    }
+
+    // Component 2: Game Mode Performance (25%)
+    const gameProgress = allProgress.filter(p => p.mode === "game");
+    let gameModeScore = 0;
+    if (gameProgress.length > 0) {
+      const weightedGameProgress = gameProgress.map(progress => {
+        const accuracy = progress.correct ? 100 : 0;
+        const weight = calculateTimeWeight(progress.answeredAt, 28); // 28-day half-life
+        return { accuracy, weight };
+      });
+      
+      const totalWeight = weightedGameProgress.reduce((sum, p) => sum + p.weight, 0);
+      if (totalWeight > 0) {
+        gameModeScore = weightedGameProgress.reduce((sum, p) => sum + (p.accuracy * p.weight), 0) / totalWeight;
+      }
+    }
+
+    // Component 3: Spaced Repetition Performance (15%)
+    let spacedRepetitionScore = 0;
+    if (spacedRepetitionData.length > 0) {
+      // Calculate average ease factor and recent review performance
+      const avgEaseFactor = spacedRepetitionData.reduce((sum, sr) => sum + sr.easeFactor, 0) / spacedRepetitionData.length;
+      
+      // Recent reviews (last 30 days)
+      const recentReviews = allProgress.filter(p => {
+        const daysDiff = (now.getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 30;
+      });
+      
+      const recentCorrectRate = recentReviews.length > 0 
+        ? (recentReviews.filter(p => p.correct).length / recentReviews.length) * 100 
+        : 0;
+      
+      // Map ease factor (baseline 2.5) to 0-100 scale and combine with recent performance
+      const easeFactorScore = Math.max(0, Math.min(100, ((avgEaseFactor - 1.3) / 1.7) * 100));
+      spacedRepetitionScore = Math.max(0, Math.min(100, easeFactorScore * (recentCorrectRate / 100)));
+    }
+
+    // Calculate category coverage and breadth
+    const categoryCoverage: Array<{
+      categoryId: string;
+      categoryName: string;
+      accuracy: number;
+      recentQuestions: number;
+      weight: number;
+      covered: boolean;
+    }> = [];
+
+    for (const category of categories) {
+      const categoryProgress = allProgress.filter(p => {
+        const question = Array.from(this.questions.values()).find(q => q.id === p.questionId);
+        return question?.categoryId === category.id;
+      });
+
+      // Recent questions (last 60 days)
+      const recentProgress = categoryProgress.filter(p => {
+        const daysDiff = (now.getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24);
+        return daysDiff <= 60;
+      });
+
+      const accuracy = recentProgress.length > 0 
+        ? (recentProgress.filter(p => p.correct).length / recentProgress.length) * 100 
+        : 0;
+
+      const covered = accuracy >= 70 && recentProgress.length >= 3;
+
+      categoryCoverage.push({
+        categoryId: category.id,
+        categoryName: category.name,
+        accuracy,
+        recentQuestions: recentProgress.length,
+        weight: category.weight,
+        covered
+      });
+    }
+
+    const coveredCategories = categoryCoverage.filter(c => c.covered).length;
+    const breadthFactor = Math.min(1, coveredCategories / 10);
+
+    // Calculate base score from components
+    const components = [
+      { name: "Anytime! Test", score: anytimeTestScore, weight: 0.6, description: "Practice test performance" },
+      { name: "Game Mode", score: gameModeScore, weight: 0.25, description: "Traditional game performance" },
+      { name: "Spaced Repetition", score: spacedRepetitionScore, weight: 0.15, description: "Knowledge retention" }
+    ];
+
+    const baseScore = components.reduce((sum, comp) => sum + (comp.score * comp.weight), 0);
+    
+    // Apply breadth factor: final = baseScore * (0.7 + 0.3 * breadthFactor)
+    // If covered < 6 categories, cap readiness at 69%
+    let overallScore = baseScore * (0.7 + 0.3 * breadthFactor);
+    if (coveredCategories < 6) {
+      overallScore = Math.min(overallScore, 69);
+    }
+
+    // Letter grade
+    const letterGrade: "A" | "B" | "C" | "D" | "F" = 
+      overallScore >= 90 ? "A" :
+      overallScore >= 80 ? "B" :
+      overallScore >= 70 ? "C" :
+      overallScore >= 60 ? "D" : "F";
+
+    // Test ready: ≥80% readiness and at least one passing test in last 30 days
+    const recentPassingTests = testAttempts.filter(attempt => {
+      const daysDiff = (now.getTime() - attempt.finishedAt.getTime()) / (1000 * 60 * 60 * 24);
+      const accuracy = (attempt.correctCount / attempt.totalQuestions) * 100;
+      return daysDiff <= 30 && accuracy >= 70;
+    });
+
+    const testReady = overallScore >= 80 && recentPassingTests.length > 0;
+
+    // Identify weak categories (below 60% accuracy or insufficient recent questions)
+    const weakCategories = categoryCoverage.filter(c => c.accuracy < 60 || c.recentQuestions < 3);
+
+    return {
+      overallScore: Math.round(overallScore * 10) / 10,
+      letterGrade,
+      components,
+      categoryBreadth: {
+        coveredCategories,
+        totalCategories: categories.length,
+        requiredCategories: 10,
+        breadthFactor: Math.round(breadthFactor * 100) / 100
+      },
+      categoryCoverage,
+      weakCategories,
+      testReady,
+      lastUpdated: now
+    };
   }
 }
 
