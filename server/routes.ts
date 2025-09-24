@@ -104,8 +104,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User progress
   app.post("/api/progress", async (req, res) => {
     try {
+      console.log("🎯 POST /api/progress called with:", req.body);
       const validatedData = insertUserProgressSchema.parse(req.body);
       const progress = await storage.createUserProgress(validatedData);
+      console.log("📊 Progress saved:", progress);
       
       // Update spaced repetition data
       const srData = await storage.getSpacedRepetitionForQuestion(validatedData.questionId);
@@ -128,12 +130,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastReviewed: new Date(),
         });
       }
+
+      // 🚨 CRITICAL FIX: Trigger achievement detection after saving progress
+      console.log("🏆 Checking achievements for progress:", progress.id);
+      try {
+        const notifications = await storage.checkAndAwardAchievements(progress);
+        console.log("🎉 Achievement notifications created:", notifications.length);
+      } catch (achievementError) {
+        console.error("❌ Achievement detection failed:", achievementError);
+        // Don't fail the entire request if achievement detection fails
+      }
+
+      // Also trigger full achievement evaluation to update all progress
+      try {
+        await storage.evaluateAchievements();
+        console.log("✅ Achievement evaluation completed");
+      } catch (evaluationError) {
+        console.error("❌ Achievement evaluation failed:", evaluationError);
+      }
       
       res.json(progress);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      console.error("❌ Progress save failed:", error);
       res.status(500).json({ message: "Failed to save progress" });
     }
   });

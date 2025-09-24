@@ -36,8 +36,10 @@ export default function Home() {
   });
 
   const handleQuestionSelect = (questionId: string) => {
+    console.log("🎯 Question selected:", questionId);
     setSelectedQuestion(questionId);
     setCurrentScreen("question");
+    console.log("🔄 Screen changed to question");
   };
 
   const handleRapidFire = () => {
