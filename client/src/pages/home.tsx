@@ -6,7 +6,7 @@ import RapidFireSettings from "@/components/rapid-fire-settings";
 import StatsDashboard from "@/components/stats-dashboard";
 import BottomNavigation from "@/components/bottom-navigation";
 import FeedbackModal from "@/components/feedback-modal";
-import { Trophy, Settings } from "lucide-react";
+import { GraduationCap, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 type Screen = "game" | "question" | "rapid-fire" | "rapid-fire-settings" | "anytime-test" | "stats" | "profile";
@@ -27,6 +27,10 @@ export default function Home() {
 
   const { data: overallStats } = useQuery({
     queryKey: ["/api/stats/overall"],
+  });
+
+  const { data: readinessData } = useQuery({
+    queryKey: ["/api/readiness"],
   });
 
   const handleQuestionSelect = (questionId: string) => {
@@ -90,11 +94,11 @@ export default function Home() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Trophy className="text-secondary text-2xl" data-testid="trophy-icon" />
+              <GraduationCap className="text-secondary text-2xl" data-testid="graduation-cap-icon" />
               <div>
                 <h1 className="text-lg font-bold" data-testid="app-title">Jeopardy Trainer</h1>
-                <p className="text-sm text-primary-foreground/80" data-testid="user-level">
-                  Level 12 • {overallStats?.totalQuestions || 0} pts
+                <p className="text-sm text-primary-foreground/80" data-testid="readiness-score">
+                  {readinessData ? `${readinessData.overallScore.toFixed(1)}% • Grade ${readinessData.letterGrade}` : "Loading readiness..."}
                 </p>
               </div>
             </div>
