@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, AlertCircle, Target, Trophy, Clock, Brain } from "lucide-react";
 import StreakIndicator, { StreakCard } from "@/components/streak-indicator";
+import DailyGoals from "@/components/daily-goals";
 import type { CategoryStats, DailyStats, ReadinessScore, GamificationStats } from "@shared/schema";
 
 export default function StatsDashboard() {
@@ -246,6 +247,9 @@ export default function StatsDashboard() {
           todayComplete={gamificationStats.streakInfo.todayComplete}
         />
       )}
+
+      {/* Daily Goals */}
+      <DailyGoals />
 
       {/* Performance Summary */}
       <Card className="p-4">
