@@ -6,6 +6,7 @@ import RapidFireSettings from "@/components/rapid-fire-settings";
 import StatsDashboard from "@/components/stats-dashboard";
 import BottomNavigation from "@/components/bottom-navigation";
 import FeedbackModal from "@/components/feedback-modal";
+import Header from "@/components/header";
 import { GraduationCap, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -89,36 +90,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="main-app">
-      {/* Header */}
-      <header className="jeopardy-gradient text-primary-foreground shadow-lg" data-testid="app-header">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <GraduationCap className="text-secondary text-2xl" data-testid="graduation-cap-icon" />
-              <div>
-                <h1 className="text-lg font-bold" data-testid="app-title">Jeopardy Trainer</h1>
-                <p className="text-sm text-primary-foreground/80" data-testid="readiness-score">
-                  {readinessData ? `${readinessData.overallScore.toFixed(1)}% • Grade ${readinessData.letterGrade}` : "Loading readiness..."}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className="text-sm text-primary-foreground/80">Daily Streak</div>
-                <div className="text-lg font-bold text-secondary" data-testid="daily-streak">
-                  {overallStats?.currentStreak || 0}
-                </div>
-              </div>
-              <button 
-                className="p-2 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
-                data-testid="button-settings"
-              >
-                <Settings className="text-xl" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* New Header with Notification Center */}
+      <Header />
 
       {/* Main Content */}
       <main className="pb-20">
