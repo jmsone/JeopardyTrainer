@@ -4,13 +4,14 @@ import QuestionView from "@/components/question-view";
 import RapidFireMode from "@/components/rapid-fire-mode";
 import RapidFireSettings from "@/components/rapid-fire-settings";
 import StatsDashboard from "@/components/stats-dashboard";
+import AchievementGallery from "@/components/achievement-gallery";
 import BottomNavigation from "@/components/bottom-navigation";
 import FeedbackModal from "@/components/feedback-modal";
 import Header from "@/components/header";
 import { GraduationCap, Settings } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-type Screen = "game" | "question" | "rapid-fire" | "rapid-fire-settings" | "anytime-test" | "stats" | "profile";
+type Screen = "game" | "question" | "rapid-fire" | "rapid-fire-settings" | "anytime-test" | "stats" | "achievements";
 
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("game");
@@ -83,6 +84,8 @@ export default function Home() {
         return <RapidFireMode isAnytimeTest={true} onBack={() => setCurrentScreen("game")} />;
       case "stats":
         return <StatsDashboard />;
+      case "achievements":
+        return <AchievementGallery />;
       default:
         return <GameBoard onQuestionSelect={handleQuestionSelect} onRapidFire={handleRapidFire} onAnytimeTest={handleAnytimeTest} />;
     }

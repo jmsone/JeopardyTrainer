@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Home, Brain, BarChart3, User } from "lucide-react";
+import { Home, Brain, BarChart3, Trophy } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface BottomNavigationProps {
@@ -14,7 +14,7 @@ export default function BottomNavigation({ currentScreen, onScreenChange }: Bott
     { id: "game", icon: Home, label: "Game", path: "/" },
     { id: "study", icon: Brain, label: "Study", path: "/study" },
     { id: "stats", icon: BarChart3, label: "Stats", path: "/" },
-    { id: "profile", icon: User, label: "Profile", path: "/" },
+    { id: "achievements", icon: Trophy, label: "Achievements", path: "/" },
   ];
 
   const handleNavClick = (item: typeof navItems[0]) => {
