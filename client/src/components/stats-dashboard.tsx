@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, AlertCircle, Target, Trophy, Clock, Brain } from "lucide-react";
-import type { CategoryStats, DailyStats, ReadinessScore } from "@shared/schema";
+import StreakIndicator, { StreakCard } from "@/components/streak-indicator";
+import type { CategoryStats, DailyStats, ReadinessScore, GamificationStats } from "@shared/schema";
 
 export default function StatsDashboard() {
   const { data: overallStats } = useQuery<{
@@ -24,6 +25,10 @@ export default function StatsDashboard() {
 
   const { data: readinessData } = useQuery<ReadinessScore>({
     queryKey: ["/api/readiness"],
+  });
+
+  const { data: gamificationStats } = useQuery<GamificationStats>({
+    queryKey: ["/api/gamification-stats"],
   });
 
   return (
@@ -229,6 +234,19 @@ export default function StatsDashboard() {
         </div>
       </Card>
 
+      {/* Streak Overview */}
+      {gamificationStats && (
+        <StreakCard
+          dailyStreak={gamificationStats.streakInfo.dailyStreak}
+          weeklyStreak={gamificationStats.streakInfo.weeklyStreak}
+          monthlyStreak={gamificationStats.streakInfo.monthlyStreak}
+          longestStreak={gamificationStats.streakInfo.longestDailyStreak}
+          goalProgress={gamificationStats.streakInfo.goalProgress}
+          questionsToday={gamificationStats.streakInfo.questionsToday}
+          todayComplete={gamificationStats.streakInfo.todayComplete}
+        />
+      )}
+
       {/* Performance Summary */}
       <Card className="p-4">
         <h3 className="font-bold mb-4 flex items-center">
@@ -248,11 +266,16 @@ export default function StatsDashboard() {
             </div>
             <div className="text-sm text-muted-foreground">Overall Accuracy</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-secondary" data-testid="stat-current-streak">
-              {overallStats?.currentStreak || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Current Streak</div>
+          <div className="flex justify-center" data-testid="stat-current-streak">
+            <StreakIndicator
+              streakValue={overallStats?.currentStreak || 0}
+              streakType="daily"
+              goalProgress={gamificationStats?.streakInfo.goalProgress || 0}
+              size="large"
+              animated={true}
+              showProgress={true}
+              showLabel={true}
+            />
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-primary" data-testid="stat-study-time">

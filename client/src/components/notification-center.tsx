@@ -34,13 +34,22 @@ export default function NotificationCenter() {
     }
   };
 
-  const getNotificationIcon = (type: string, icon?: string) => {
+  const getNotificationIcon = (type: string, icon?: string, message?: string) => {
     if (icon) return icon; // Use custom emoji icon if provided
     
     switch (type) {
       case "achievement":
         return "🏆";
       case "streak":
+        // Enhanced flame icons based on streak value in message
+        if (message?.includes("streak")) {
+          const streakMatch = message.match(/(\d+)/);
+          const streakValue = streakMatch ? parseInt(streakMatch[1]) : 1;
+          if (streakValue >= 15) return "🔥🔥🔥🔥";
+          if (streakValue >= 7) return "🔥🔥🔥";
+          if (streakValue >= 3) return "🔥🔥";
+          return "🔥";
+        }
         return "🔥";
       case "milestone":
         return "⭐";
@@ -147,7 +156,7 @@ export default function NotificationCenter() {
                       <div className="flex items-start gap-3 ml-2">
                         {/* Icon */}
                         <div className="text-2xl flex-shrink-0">
-                          {getNotificationIcon(notification.type, notification.icon || undefined)}
+                          {getNotificationIcon(notification.type, notification.icon || undefined, notification.message)}
                         </div>
                         
                         {/* Content */}

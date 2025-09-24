@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Target, GraduationCap } from "lucide-react";
 import NotificationCenter from "@/components/notification-center";
+import StreakIndicator from "@/components/streak-indicator";
 import { cn } from "@/lib/utils";
-import type { ReadinessScore } from "@shared/schema";
+import type { ReadinessScore, GamificationStats } from "@shared/schema";
 
 export default function Header() {
   const { data: readinessData } = useQuery<ReadinessScore>({
@@ -16,6 +17,10 @@ export default function Header() {
     totalStudyTime: number;
   }>({
     queryKey: ["/api/stats/overall"],
+  });
+
+  const { data: gamificationStats } = useQuery<GamificationStats>({
+    queryKey: ["/api/gamification-stats"],
   });
 
   const getGradeColor = (grade: string, score: number) => {
@@ -85,11 +90,18 @@ export default function Header() {
           <div className="flex items-center gap-3">
             {/* Quick Stats */}
             <div className="hidden md:flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-              {overallStats?.currentStreak && overallStats.currentStreak > 0 && (
-                <div className="flex items-center gap-1">
-                  <span className="text-orange-500">🔥</span>
-                  <span className="font-medium">{overallStats.currentStreak}</span>
-                </div>
+              {/* Enhanced Streak Indicator */}
+              {overallStats?.currentStreak !== undefined && (
+                <StreakIndicator
+                  streakValue={overallStats.currentStreak}
+                  streakType="daily"
+                  goalProgress={gamificationStats?.streakInfo.goalProgress || 0}
+                  size="small"
+                  animated={true}
+                  showProgress={false}
+                  showLabel={false}
+                  className="hover:scale-110 transition-transform"
+                />
               )}
               
               {overallStats?.totalQuestions && overallStats.totalQuestions > 0 && (
