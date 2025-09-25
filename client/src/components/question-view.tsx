@@ -44,8 +44,17 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
       return apiRequest("POST", "/api/progress", data);
     },
     onSuccess: () => {
+      // Invalidate all data that depends on user progress
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/answered-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/readiness"] });
+      
+      // COST OPTIMIZATION: Trigger fresh achievement and gamification data
+      queryClient.invalidateQueries({ queryKey: ["/api/achievements/progress"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/gamification-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-goals"] });
     },
   });
 

@@ -20,11 +20,12 @@ export default function DailyGoals() {
 
   const { data: userGoals } = useQuery<UserGoals>({
     queryKey: ["/api/user-goals"],
-    refetchInterval: 30000,
+    refetchInterval: 60000, // Reduced from 30s to 60s for cost optimization
   });
 
   const { data: gamificationStats } = useQuery<GamificationStats>({
     queryKey: ["/api/gamification-stats"],
+    // No separate refetch - will be updated by celebration system
   });
 
   const updateGoalsMutation = useMutation({

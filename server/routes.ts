@@ -456,6 +456,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // COST OPTIMIZATION: Consolidated gamification data endpoint
+  app.get("/api/gamification/dashboard", async (req, res) => {
+    try {
+      const [
+        stats,
+        achievements,
+        unreadNotificationCount,
+        userGoals
+      ] = await Promise.all([
+        storage.getGamificationStats(),
+        storage.getAchievementsWithProgress(),
+        storage.getUnreadNotificationCount(),
+        storage.getUserGoals()
+      ]);
+
+      res.json({
+        stats,
+        achievements,
+        unreadNotificationCount: { count: unreadNotificationCount },
+        userGoals
+      });
+    } catch (error) {
+      console.error("Failed to get consolidated gamification data:", error);
+      res.status(500).json({ message: "Failed to fetch gamification dashboard" });
+    }
+  });
+
   // Achievement Evaluation (trigger manually or after user actions)
   app.post("/api/evaluate-achievements", async (req, res) => {
     try {

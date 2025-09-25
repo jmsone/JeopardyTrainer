@@ -21,15 +21,17 @@ export default function CelebrationSystem() {
   const lastEarnedCountRef = useRef<number>(0);
   const processedAchievementsRef = useRef<Set<string>>(new Set());
 
-  // Monitor achievements for new unlocks
+  // Monitor achievements for new unlocks - COST OPTIMIZED: Only poll after user actions
   const { data: achievements = [] } = useQuery<AchievementWithProgress[]>({
     queryKey: ["/api/achievements/progress"],
-    refetchInterval: 5000, // Check every 5 seconds for new achievements
+    refetchInterval: false, // Only refetch manually after progress
+    staleTime: 30000, // Consider fresh for 30 seconds
   });
 
   const { data: gamificationStats } = useQuery<GamificationStats>({
     queryKey: ["/api/gamification-stats"],
-    refetchInterval: 5000,
+    refetchInterval: false, // Only refetch manually after progress
+    staleTime: 30000, // Consider fresh for 30 seconds
   });
 
   // Detect new achievements

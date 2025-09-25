@@ -12,12 +12,12 @@ export default function NotificationCenter() {
 
   const { data: notifications = [] } = useQuery<NotificationWithAction[]>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 60000, // COST OPTIMIZED: Reduced from 30s to 60s
   });
 
   const { data: unreadCount = { count: 0 } } = useQuery<{ count: number }>({
     queryKey: ["/api/notifications/unread-count"],
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 30000, // COST OPTIMIZED: Reduced from 10s to 30s
   });
 
   const markAsReadMutation = useMutation({
