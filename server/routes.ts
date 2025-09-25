@@ -64,9 +64,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get answered questions
-  app.get("/api/answered-questions", async (req, res) => {
+  app.get("/api/answered-questions", isAuthenticated, async (req: any, res) => {
     try {
-      const answeredQuestions = await storage.getAnsweredQuestions();
+      const userId = req.user.claims.sub;
+      const answeredQuestions = await storage.getAnsweredQuestions(userId);
       res.json(answeredQuestions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch answered questions" });
@@ -74,9 +75,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset game board with new questions
-  app.post("/api/reset-board", async (req, res) => {
+  app.post("/api/reset-board", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.resetGameBoard();
+      const userId = req.user.claims.sub;
+      await storage.resetGameBoard(userId);
       res.json({ message: "Game board reset successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to reset game board" });
@@ -84,9 +86,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clear all progress
-  app.post("/api/clear-progress", async (req, res) => {
+  app.post("/api/clear-progress", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.clearProgress();
+      const userId = req.user.claims.sub;
+      await storage.clearProgress(userId);
       res.json({ message: "Progress cleared successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to clear progress" });
@@ -117,10 +120,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User progress
-  app.post("/api/progress", async (req, res) => {
+  app.post("/api/progress", isAuthenticated, async (req: any, res) => {
     try {
-      console.log("🎯 POST /api/progress called with:", req.body);
-      const validatedData = insertUserProgressSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      console.log("🎯 POST /api/progress called with:", req.body, "for user:", userId);
+      const validatedData = insertUserProgressSchema.parse({
+        ...req.body,
+        userId: userId
+      });
       const progress = await storage.createUserProgress(validatedData);
       console.log("📊 Progress saved:", progress);
       
@@ -175,28 +182,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Statistics
-  app.get("/api/stats/categories", async (req, res) => {
+  app.get("/api/stats/categories", isAuthenticated, async (req: any, res) => {
     try {
-      const stats = await storage.getCategoryStats();
+      const userId = req.user.claims.sub;
+      const stats = await storage.getCategoryStats(userId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch category stats" });
     }
   });
 
-  app.get("/api/stats/daily", async (req, res) => {
+  app.get("/api/stats/daily", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const days = parseInt(req.query.days as string) || 7;
-      const stats = await storage.getDailyStats(days);
+      const stats = await storage.getDailyStats(days, userId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch daily stats" });
     }
   });
 
-  app.get("/api/stats/overall", async (req, res) => {
+  app.get("/api/stats/overall", isAuthenticated, async (req: any, res) => {
     try {
-      const stats = await storage.getOverallStats();
+      const userId = req.user.claims.sub;
+      const stats = await storage.getOverallStats(userId);
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch overall stats" });
@@ -371,9 +381,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/achievements/progress", async (req, res) => {
+  app.get("/api/achievements/progress", isAuthenticated, async (req: any, res) => {
     try {
-      const achievementsWithProgress = await storage.getAchievementsWithProgress();
+      const userId = req.user.claims.sub;
+      const achievementsWithProgress = await storage.getAchievementsWithProgress(userId);
       res.json(achievementsWithProgress);
     } catch (error) {
       console.error("Failed to get achievements with progress:", error);
@@ -381,9 +392,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/user-achievements", async (req, res) => {
+  app.get("/api/user-achievements", isAuthenticated, async (req: any, res) => {
     try {
-      const userAchievements = await storage.getUserAchievements();
+      const userId = req.user.claims.sub;
+      const userAchievements = await storage.getUserAchievements(userId);
       res.json(userAchievements);
     } catch (error) {
       console.error("Failed to get user achievements:", error);
@@ -392,10 +404,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notifications
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { unread } = req.query;
-      const notifications = await storage.getNotifications(unread === 'true');
+      const notifications = await storage.getNotifications(unread === 'true', userId);
       res.json(notifications);
     } catch (error) {
       console.error("Failed to get notifications:", error);
@@ -403,10 +416,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/notifications/:id/read", async (req, res) => {
+  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { id } = req.params;
-      await storage.markNotificationRead(id);
+      await storage.markNotificationRead(id, userId);
       res.json({ message: "Notification marked as read" });
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
@@ -414,9 +428,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/notifications/unread-count", async (req, res) => {
+  app.get("/api/notifications/unread-count", isAuthenticated, async (req: any, res) => {
     try {
-      const count = await storage.getUnreadNotificationCount();
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadNotificationCount(userId);
       res.json({ count });
     } catch (error) {
       console.error("Failed to get unread notification count:", error);
@@ -425,9 +440,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Goals
-  app.get("/api/goals", async (req, res) => {
+  app.get("/api/goals", isAuthenticated, async (req: any, res) => {
     try {
-      const goals = await storage.getUserGoals();
+      const userId = req.user.claims.sub;
+      const goals = await storage.getUserGoals(userId);
       res.json(goals);
     } catch (error) {
       console.error("Failed to get user goals:", error);
@@ -435,10 +451,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/goals", async (req, res) => {
+  app.patch("/api/goals", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertUserGoalsSchema.partial().parse(req.body);
-      const updatedGoals = await storage.updateUserGoals(validatedData);
+      const updatedGoals = await storage.updateUserGoals(validatedData, userId);
       res.json(updatedGoals);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -451,9 +468,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Streaks and Stats
-  app.get("/api/streaks", async (req, res) => {
+  app.get("/api/streaks", isAuthenticated, async (req: any, res) => {
     try {
-      const streakInfo = await storage.getStreakInfo();
+      const userId = req.user.claims.sub;
+      const streakInfo = await storage.getStreakInfo(userId);
       res.json(streakInfo);
     } catch (error) {
       console.error("Failed to get streak info:", error);
@@ -461,9 +479,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/gamification-stats", async (req, res) => {
+  app.get("/api/gamification-stats", isAuthenticated, async (req: any, res) => {
     try {
-      const stats = await storage.getGamificationStats();
+      const userId = req.user.claims.sub;
+      const stats = await storage.getGamificationStats(userId);
       res.json(stats);
     } catch (error) {
       console.error("Failed to get gamification stats:", error);
@@ -472,18 +491,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // COST OPTIMIZATION: Consolidated gamification data endpoint
-  app.get("/api/gamification/dashboard", async (req, res) => {
+  app.get("/api/gamification/dashboard", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const [
         stats,
         achievements,
         unreadNotificationCount,
         userGoals
       ] = await Promise.all([
-        storage.getGamificationStats(),
-        storage.getAchievementsWithProgress(),
-        storage.getUnreadNotificationCount(),
-        storage.getUserGoals()
+        storage.getGamificationStats(userId),
+        storage.getAchievementsWithProgress(userId),
+        storage.getUnreadNotificationCount(userId),
+        storage.getUserGoals(userId)
       ]);
 
       res.json({

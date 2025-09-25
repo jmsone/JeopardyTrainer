@@ -51,14 +51,14 @@ export interface IStorage {
   createQuestion(question: InsertQuestion): Promise<Question>;
   getQuestionByValue(categoryId: string, value: number): Promise<QuestionWithCategory | undefined>;
   getRapidFireQuestions(limit?: number, categoryIds?: string[]): Promise<QuestionWithCategory[]>;
-  getAnsweredQuestions(): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>;
-  clearProgress(): Promise<void>;
-  resetGameBoard(): Promise<void>;
+  getAnsweredQuestions(userId?: string): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>;
+  clearProgress(userId?: string): Promise<void>;
+  resetGameBoard(userId?: string): Promise<void>;
   
   // User Progress
-  getUserProgress(): Promise<UserProgress[]>;
+  getUserProgress(userId?: string): Promise<UserProgress[]>;
   createUserProgress(progress: InsertUserProgress): Promise<UserProgress>;
-  getUserProgressByCategory(categoryId: string): Promise<UserProgress[]>;
+  getUserProgressByCategory(categoryId: string, userId?: string): Promise<UserProgress[]>;
   
   // Spaced Repetition
   getSpacedRepetitionData(): Promise<SpacedRepetition[]>;
@@ -86,9 +86,9 @@ export interface IStorage {
   getReadinessScore(): Promise<ReadinessScore>;
   
   // Statistics
-  getCategoryStats(): Promise<CategoryStats[]>;
-  getDailyStats(days: number): Promise<DailyStats[]>;
-  getOverallStats(): Promise<{
+  getCategoryStats(userId?: string): Promise<CategoryStats[]>;
+  getDailyStats(days: number, userId?: string): Promise<DailyStats[]>;
+  getOverallStats(userId?: string): Promise<{
     totalQuestions: number;
     overallAccuracy: number;
     currentStreak: number;
@@ -98,24 +98,24 @@ export interface IStorage {
   // Gamification - Achievements
   getAchievements(): Promise<Achievement[]>;
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
-  getUserAchievements(): Promise<UserAchievement[]>;
-  getUserAchievementByKey(key: string): Promise<UserAchievement | undefined>;
+  getUserAchievements(userId?: string): Promise<UserAchievement[]>;
+  getUserAchievementByKey(key: string, userId?: string): Promise<UserAchievement | undefined>;
   createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
   updateUserAchievement(id: string, data: Partial<UserAchievement>): Promise<UserAchievement>;
-  getAchievementsWithProgress(): Promise<AchievementWithProgress[]>;
-  awardAchievement(achievementKey: string, progress?: number): Promise<{ achievement: Achievement; notification: Notification } | null>;
+  getAchievementsWithProgress(userId?: string): Promise<AchievementWithProgress[]>;
+  awardAchievement(achievementKey: string, progress?: number, userId?: string): Promise<{ achievement: Achievement; notification: Notification } | null>;
 
   // Gamification - Notifications
-  getNotifications(unreadOnly?: boolean): Promise<NotificationWithAction[]>;
+  getNotifications(unreadOnly?: boolean, userId?: string): Promise<NotificationWithAction[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
-  markNotificationRead(id: string): Promise<void>;
-  getUnreadNotificationCount(): Promise<number>;
+  markNotificationRead(id: string, userId?: string): Promise<void>;
+  getUnreadNotificationCount(userId?: string): Promise<number>;
 
   // Gamification - Goals and Streaks
-  getUserGoals(): Promise<UserGoals>;
-  updateUserGoals(goals: Partial<InsertUserGoals>): Promise<UserGoals>;
-  getStreakInfo(): Promise<StreakInfo>;
-  getGamificationStats(): Promise<GamificationStats>;
+  getUserGoals(userId?: string): Promise<UserGoals>;
+  updateUserGoals(goals: Partial<InsertUserGoals>, userId?: string): Promise<UserGoals>;
+  getStreakInfo(userId?: string): Promise<StreakInfo>;
+  getGamificationStats(userId?: string): Promise<GamificationStats>;
 
   // Achievement Detection
   checkAndAwardAchievements(progressData: UserProgress): Promise<Notification[]>;
@@ -513,28 +513,53 @@ export class MemStorage implements IStorage {
     return { ...question, category };
   }
 
-  async getAnsweredQuestions(): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]> {
-    return Array.from(this.userProgress.values()).map(p => ({ 
+  async getAnsweredQuestions(userId?: string): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]> {
+    let progressEntries = Array.from(this.userProgress.values());
+    
+    // Filter by userId if provided
+    if (userId) {
+      progressEntries = progressEntries.filter(p => p.userId === userId);
+    }
+    
+    return progressEntries.map(p => ({ 
       questionId: p.questionId, 
       assessment: p.selfAssessment as "correct" | "incorrect" | "unsure"
     }));
   }
 
-  async clearProgress(): Promise<void> {
-    this.userProgress.clear();
-    this.spacedRepetition.clear();
+  async clearProgress(userId?: string): Promise<void> {
+    if (userId) {
+      // Clear progress for specific user only
+      for (const [key, progress] of this.userProgress.entries()) {
+        if (progress.userId === userId) {
+          this.userProgress.delete(key);
+        }
+      }
+      for (const [key, sr] of this.spacedRepetition.entries()) {
+        if (sr.userId === userId) {
+          this.spacedRepetition.delete(key);
+        }
+      }
+    } else {
+      // Clear all progress (backward compatibility)
+      this.userProgress.clear();
+      this.spacedRepetition.clear();
+    }
   }
 
-  async resetGameBoard(): Promise<void> {
-    // Clear progress and regenerate questions with new data
-    await this.clearProgress();
+  async resetGameBoard(userId?: string): Promise<void> {
+    // Clear progress for user (or all if no userId provided)
+    await this.clearProgress(userId);
     
-    // Clear existing questions and categories
-    this.categories.clear();
-    this.questions.clear();
-    
-    // Re-initialize with fresh data
-    this.initializeData();
+    // Only regenerate global data if no specific user (backward compatibility)
+    if (!userId) {
+      // Clear existing questions and categories
+      this.categories.clear();
+      this.questions.clear();
+      
+      // Re-initialize with fresh data
+      this.initializeData();
+    }
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
@@ -550,8 +575,15 @@ export class MemStorage implements IStorage {
     return question;
   }
 
-  async getUserProgress(): Promise<UserProgress[]> {
-    return Array.from(this.userProgress.values());
+  async getUserProgress(userId?: string): Promise<UserProgress[]> {
+    let progressEntries = Array.from(this.userProgress.values());
+    
+    // Filter by userId if provided
+    if (userId) {
+      progressEntries = progressEntries.filter(p => p.userId === userId);
+    }
+    
+    return progressEntries;
   }
 
   async createUserProgress(insertProgress: InsertUserProgress): Promise<UserProgress> {
@@ -570,13 +602,20 @@ export class MemStorage implements IStorage {
     return progress;
   }
 
-  async getUserProgressByCategory(categoryId: string): Promise<UserProgress[]> {
+  async getUserProgressByCategory(categoryId: string, userId?: string): Promise<UserProgress[]> {
     const categoryQuestions = await this.getQuestionsByCategory(categoryId);
     const questionIds = new Set(categoryQuestions.map(q => q.id));
     
-    return Array.from(this.userProgress.values()).filter(
+    let progressEntries = Array.from(this.userProgress.values()).filter(
       progress => questionIds.has(progress.questionId)
     );
+    
+    // Filter by userId if provided
+    if (userId) {
+      progressEntries = progressEntries.filter(p => p.userId === userId);
+    }
+    
+    return progressEntries;
   }
 
   async getSpacedRepetitionData(): Promise<SpacedRepetition[]> {
@@ -630,12 +669,12 @@ export class MemStorage implements IStorage {
     return questionsWithCategories;
   }
 
-  async getCategoryStats(): Promise<CategoryStats[]> {
+  async getCategoryStats(userId?: string): Promise<CategoryStats[]> {
     const categories = await this.getCategories();
     const stats: CategoryStats[] = [];
 
     for (const category of categories) {
-      const categoryProgress = await this.getUserProgressByCategory(category.id);
+      const categoryProgress = await this.getUserProgressByCategory(category.id, userId);
       const totalQuestions = categoryProgress.length;
       const correctAnswers = categoryProgress.filter(p => p.correct).length;
       const averageTime = totalQuestions > 0 
@@ -655,12 +694,12 @@ export class MemStorage implements IStorage {
     return stats;
   }
 
-  async getDailyStats(days: number): Promise<DailyStats[]> {
+  async getDailyStats(days: number, userId?: string): Promise<DailyStats[]> {
     const endDate = new Date();
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - days);
 
-    const allProgress = await this.getUserProgress();
+    const allProgress = await this.getUserProgress(userId);
     const dailyStats: DailyStats[] = [];
 
     for (let i = 0; i < days; i++) {
@@ -689,13 +728,13 @@ export class MemStorage implements IStorage {
     return dailyStats;
   }
 
-  async getOverallStats(): Promise<{
+  async getOverallStats(userId?: string): Promise<{
     totalQuestions: number;
     overallAccuracy: number;
     currentStreak: number;
     totalStudyTime: number;
   }> {
-    const allProgress = await this.getUserProgress();
+    const allProgress = await this.getUserProgress(userId);
     const totalQuestions = allProgress.length;
     const correctAnswers = allProgress.filter(p => p.correct).length;
     const overallAccuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
