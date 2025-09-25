@@ -1,11 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { Target, GraduationCap } from "lucide-react";
+import { Target, GraduationCap, User, LogOut, ChevronDown } from "lucide-react";
 import NotificationCenter from "@/components/notification-center";
 import StreakIndicator from "@/components/streak-indicator";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { ReadinessScore, GamificationStats } from "@shared/schema";
 
 export default function Header() {
+  const { user, isLoading: authLoading } = useAuth();
+  
   const { data: readinessData } = useQuery<ReadinessScore>({
     queryKey: ["/api/readiness"],
   });
@@ -33,6 +44,14 @@ export default function Header() {
 
   const score = readinessData?.overallScore || 0;
   const grade = readinessData?.letterGrade || "F";
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  const getUserInitials = (firstName: string, lastName: string) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
@@ -119,8 +138,48 @@ export default function Header() {
               )}
             </div>
 
-            {/* Notification Center */}
-            <NotificationCenter />
+            {/* User Profile & Notification Center */}
+            <div className="flex items-center gap-3">
+              <NotificationCenter />
+              
+              {/* User Profile Dropdown */}
+              {user && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg px-2 py-1 transition-colors" data-testid="dropdown-user-profile">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={user.profileImageUrl} alt={`${user.firstName} ${user.lastName}`} />
+                      <AvatarFallback className="bg-blue-500 text-white text-sm font-medium">
+                        {getUserInitials(user.firstName, user.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden sm:block text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-username">
+                        {user.firstName} {user.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-email">
+                        {user.email}
+                      </p>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem className="flex items-center gap-2" data-testid="menu-profile">
+                      <User className="w-4 h-4" />
+                      Profile Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="flex items-center gap-2 text-red-600 dark:text-red-400" 
+                      onClick={handleLogout}
+                      data-testid="button-logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
         </div>
       </div>
