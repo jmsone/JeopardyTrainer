@@ -35,6 +35,10 @@ import {
 import { randomUUID } from "crypto";
 
 export interface IStorage {
+  // User operations (IMPORTANT) - mandatory for Replit Auth
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
   // Categories
   getCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
@@ -119,6 +123,7 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  private users: Map<string, User> = new Map();
   private categories: Map<string, Category> = new Map();
   private questions: Map<string, Question> = new Map();
   private userProgress: Map<string, UserProgress> = new Map();
@@ -131,16 +136,7 @@ export class MemStorage implements IStorage {
   private achievements: Map<string, Achievement> = new Map();
   private userAchievements: Map<string, UserAchievement> = new Map();
   private notifications: Map<string, Notification> = new Map();
-  private userGoals: UserGoals = {
-    id: randomUUID(),
-    dailyQuestionGoal: 10,
-    weeklyStreakGoal: 7,
-    remindersEnabled: false,
-    reminderHour: 19,
-    quietHoursStart: 22,
-    quietHoursEnd: 8,
-    updatedAt: new Date(),
-  };
+  private userGoals: Map<string, UserGoals> = new Map();
 
   constructor() {
     this.initializeData();
@@ -431,6 +427,26 @@ export class MemStorage implements IStorage {
       const achievement: Achievement = { ...ach, id: randomUUID() };
       this.achievements.set(achievement.key, achievement);
     });
+  }
+
+  // User operations (IMPORTANT) - mandatory for Replit Auth
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const existingUser = this.users.get(userData.id!);
+    const user: User = {
+      id: userData.id!,
+      email: userData.email,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      profileImageUrl: userData.profileImageUrl,
+      createdAt: existingUser?.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(user.id, user);
+    return user;
   }
 
   async getCategories(): Promise<Category[]> {
