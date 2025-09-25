@@ -1180,15 +1180,20 @@ export class MemStorage implements IStorage {
     }
   }
 
-  async getUnreadNotificationCount(): Promise<number> {
-    return Array.from(this.notifications.values()).filter(n => !n.isRead).length;
+  async getUnreadNotificationCount(userId?: string): Promise<number> {
+    const notifications = Array.from(this.notifications.values());
+    return notifications.filter(n => !n.isRead && (!userId || n.userId === userId)).length;
   }
 
-  async getUserGoals(): Promise<UserGoals> {
+  async getUserGoals(userId?: string): Promise<UserGoals> {
+    // For now, return the single user goals instance
+    // In a multi-user system, this would be scoped by userId
     return this.userGoals;
   }
 
-  async updateUserGoals(goals: Partial<InsertUserGoals>): Promise<UserGoals> {
+  async updateUserGoals(goals: Partial<InsertUserGoals>, userId?: string): Promise<UserGoals> {
+    // For now, update the single user goals instance
+    // In a multi-user system, this would be scoped by userId
     this.userGoals = {
       ...this.userGoals,
       ...goals,
@@ -1197,10 +1202,12 @@ export class MemStorage implements IStorage {
     return this.userGoals;
   }
 
-  async getStreakInfo(): Promise<StreakInfo> {
+  async getStreakInfo(userId?: string): Promise<StreakInfo> {
+    // For now, calculate streaks for all data
+    // In a multi-user system, this would be scoped by userId
     const dailyStats = await this.getDailyStats(365); // Get full year for accurate streaks
     const today = new Date().toISOString().split('T')[0];
-    const userGoals = await this.getUserGoals();
+    const userGoals = await this.getUserGoals(userId);
     
     // Calculate streaks
     let dailyStreak = 0;
@@ -1252,11 +1259,13 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getGamificationStats(): Promise<GamificationStats> {
-    const achievements = await this.getAchievementsWithProgress();
+  async getGamificationStats(userId?: string): Promise<GamificationStats> {
+    // For now, calculate stats for all data
+    // In a multi-user system, this would be scoped by userId
+    const achievements = await this.getAchievementsWithProgress(userId);
     const earnedAchievements = achievements.filter(a => a.isEarned);
-    const streakInfo = await this.getStreakInfo();
-    const unreadCount = await this.getUnreadNotificationCount();
+    const streakInfo = await this.getStreakInfo(userId);
+    const unreadCount = await this.getUnreadNotificationCount(userId);
     
     const totalPoints = earnedAchievements.reduce((sum, a) => sum + a.points, 0);
     
