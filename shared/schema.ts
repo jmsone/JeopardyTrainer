@@ -3,6 +3,18 @@ import { pgTable, text, varchar, integer, timestamp, boolean, real } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Users table - for authentication and user data
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  avatarUrl: text("avatar_url"),
+  provider: varchar("provider", { enum: ["google", "github", "replit"] }).notNull(),
+  providerId: text("provider_id").notNull(), // External provider's user ID
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastLoginAt: timestamp("last_login_at").notNull().defaultNow(),
+});
+
 export const categories = pgTable("categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -22,6 +34,7 @@ export const questions = pgTable("questions", {
 
 export const userProgress = pgTable("user_progress", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   questionId: varchar("question_id").notNull().references(() => questions.id),
   correct: boolean("correct").notNull(),
   userAnswer: text("user_answer"),
@@ -34,6 +47,7 @@ export const userProgress = pgTable("user_progress", {
 
 export const spacedRepetition = pgTable("spaced_repetition", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   questionId: varchar("question_id").notNull().references(() => questions.id),
   easeFactor: real("ease_factor").notNull().default(2.5),
   interval: integer("interval").notNull().default(1), // days
@@ -44,6 +58,7 @@ export const spacedRepetition = pgTable("spaced_repetition", {
 
 export const testAttempts = pgTable("test_attempts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   sessionId: varchar("session_id").notNull(),
   mode: varchar("mode", { enum: ["anytime_test"] }).notNull(),
   correctCount: integer("correct_count").notNull(),
@@ -89,6 +104,7 @@ export const achievements = pgTable("achievements", {
 
 export const userAchievements = pgTable("user_achievements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   achievementKey: varchar("achievement_key").notNull().references(() => achievements.key),
   progress: integer("progress").notNull().default(0), // current progress toward achievement
   maxProgress: integer("max_progress").notNull().default(1), // required progress to earn
@@ -99,6 +115,7 @@ export const userAchievements = pgTable("user_achievements", {
 
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
   type: varchar("type", { enum: ["achievement", "streak", "milestone", "reminder", "goal"] }).notNull(),
   title: text("title").notNull(),
   message: text("message").notNull(),
@@ -111,6 +128,7 @@ export const notifications = pgTable("notifications", {
 
 export const userGoals = pgTable("user_goals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(), // One goals record per user
   dailyQuestionGoal: integer("daily_question_goal").notNull().default(10),
   weeklyStreakGoal: integer("weekly_streak_goal").notNull().default(7),
   remindersEnabled: boolean("reminders_enabled").notNull().default(false),
@@ -169,11 +187,19 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+// Add users insert schema
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  lastLoginAt: true,
+});
+
 export const insertUserGoalsSchema = createInsertSchema(userGoals).omit({
   id: true,
   updatedAt: true,
 });
 
+export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type UserProgress = typeof userProgress.$inferSelect;
@@ -196,6 +222,7 @@ export type InsertTestAttempt = z.infer<typeof insertTestAttemptSchema>;
 export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertUserGoals = z.infer<typeof insertUserGoalsSchema>;
 
 // Extended types for API responses
