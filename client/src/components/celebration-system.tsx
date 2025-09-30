@@ -36,7 +36,7 @@ export default function CelebrationSystem() {
 
   // Detect new achievements
   useEffect(() => {
-    if (!achievements.length || !gamificationStats) return;
+    if (!achievements || !achievements.length || !gamificationStats) return;
 
     const earnedAchievements = achievements.filter(a => a.isEarned);
     const currentEarnedCount = earnedAchievements.length;
