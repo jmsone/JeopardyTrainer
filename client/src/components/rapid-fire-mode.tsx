@@ -14,6 +14,7 @@ interface RapidFireModeProps {
 }
 
 export default function RapidFireMode({ settings, onBack, isAnytimeTest = false }: RapidFireModeProps) {
+  const [hasStarted, setHasStarted] = useState(!isAnytimeTest); // Anytime Test requires explicit start
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [sessionStats, setSessionStats] = useState({
@@ -32,6 +33,9 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
     setTimeRemaining(15);
     setQuestionStartTime(null);
     setTestAttemptId(null);
+    if (isAnytimeTest) {
+      setHasStarted(false);
+    }
     const queryKey = isAnytimeTest ? ["/api/anytime-test-questions"] : ["/api/questions/rapid-fire", settings];
     queryClient.invalidateQueries({ queryKey });
   };
@@ -57,6 +61,7 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
         return response.json();
       }
     },
+    enabled: hasStarted, // Only fetch when test has been started
   });
 
   // Countdown timer effect
@@ -147,10 +152,72 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
     }
   };
 
+  // Show start screen for Anytime Test BEFORE loading or checking questions
+  if (isAnytimeTest && !hasStarted) {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-[600px]">
+        <Card className="max-w-2xl w-full p-8">
+          <div className="text-center space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2" data-testid="heading-anytime-test">Jeopardy! Anytime Test</h1>
+              <p className="text-muted-foreground">Test your trivia knowledge with a realistic 50-question challenge</p>
+            </div>
+
+            <Separator />
+
+            <div className="text-left space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">Test Format:</h3>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>50 questions total</li>
+                  <li>15 seconds per question</li>
+                  <li>Questions from all categories and difficulty levels</li>
+                  <li>Self-assessment after each answer</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Instructions:</h3>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>Read each question carefully</li>
+                  <li>Think of your answer before revealing</li>
+                  <li>Click "Reveal Answer" to see the correct response</li>
+                  <li>Honestly assess whether you got it right</li>
+                  <li>If time expires, the question will automatically advance</li>
+                </ul>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setHasStarted(true)} 
+                className="flex-1 text-lg py-6"
+                data-testid="button-start-test"
+              >
+                Start Test
+              </Button>
+              <Button 
+                onClick={onBack} 
+                variant="outline" 
+                className="flex-1 text-lg py-6"
+                data-testid="button-back-to-board"
+              >
+                Back to Board
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // After start screen, check loading and questions
   if (isLoading) {
     return (
       <div className="p-4 flex items-center justify-center min-h-[400px]">
-        <div className="text-center">Loading rapid-fire questions...</div>
+        <div className="text-center">Loading questions...</div>
       </div>
     );
   }
@@ -159,7 +226,7 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
     return (
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <p className="mb-4">No questions available for rapid-fire mode.</p>
+          <p className="mb-4">No questions available for {isAnytimeTest ? "anytime test" : "rapid-fire mode"}.</p>
           <Button onClick={onBack}>Back to Game Board</Button>
         </div>
       </div>

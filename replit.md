@@ -30,15 +30,19 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category frequency weighting for 2025 relevance
 
 ## Recent Changes
+- **Complete authentication system** - Integrated Replit Auth with Google OAuth, session management, user profiles, logout (2025-09-30)
+- **Rebranded to "The Daily Double Down"** - Updated all UI components, page titles, meta tags (2025-09-30)
+- **Ocean-themed color palette** - Applied #04364A, #176B87, #64CCC5, #DAFFFB throughout light/dark modes (2025-09-30)
+- **Anytime Test start screen** - Test now requires explicit user action to begin, no auto-start (2025-09-30)
+- **API cost optimization** - Reduced polling from 5s to event-driven invalidation (80%+ API call reduction)
+- **PostgreSQL database** - Migrated from in-memory storage with user-scoped data
 - Project initialized with classic Jeopardy board layout (2025-08-28)
 - Implemented self-assessment system for main board and rapid-fire mode
 - Added visual indicators for completed questions on game board (color-coded: green ✓, red ✗, orange ?)
 - Created category selection for rapid-fire mode with customizable question counts
-- Removed problematic text input validation in favor of reveal+assess approach
 - Enhanced mobile-responsive design with authentic Jeopardy styling
 - Added reset functionality for completed game boards and rapid-fire sessions
 - Fixed outdated questions and added air date display for time context
-- Integrated jService API foundation for authentic Jeopardy data
 
 ## User Preferences
 - Prefers self-assessment over exact text matching for answers
@@ -48,6 +52,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Requires authentic, current Jeopardy data with proper time context
 - Requests air date information for questions that may become outdated
 - Expects seamless continuation after completing sessions (reset/restart functionality)
+- Prefers Anytime Test to require explicit start action, not auto-start on page load
 
 ## Next Steps
 1. Integrate authentic Jeopardy data source (jService.io API)

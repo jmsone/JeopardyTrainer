@@ -66,6 +66,10 @@ export default function Home() {
     setCurrentScreen("game");
   };
 
+  const handleScreenChange = (screen: string) => {
+    setCurrentScreen(screen as Screen);
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case "game":
@@ -106,7 +110,7 @@ export default function Home() {
       {/* Bottom Navigation */}
       <BottomNavigation 
         currentScreen={currentScreen} 
-        onScreenChange={setCurrentScreen} 
+        onScreenChange={handleScreenChange} 
       />
 
       {/* Feedback Modal */}
