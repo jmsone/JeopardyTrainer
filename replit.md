@@ -1,7 +1,7 @@
-# Jeopardy Training App
+# The Daily Double Down
 
 ## Project Overview
-A mobile-optimized web application for Jeopardy training featuring spaced repetition learning, realistic question data, and comprehensive performance tracking.
+A comprehensive trivia training application featuring Google login authentication via Replit Auth, spaced repetition learning, realistic question data, sophisticated gamification, and comprehensive performance tracking.
 
 ## Core Features
 - Real Jeopardy questions from authentic data sources

@@ -14,7 +14,7 @@ export default function Landing() {
             The Daily Double Down
           </CardTitle>
           <CardDescription className="text-lg">
-            Master Jeopardy! with spaced repetition and gamification
+            Master trivia with spaced repetition and gamification
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
