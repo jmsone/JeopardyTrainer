@@ -49,8 +49,17 @@ export default function Header() {
     window.location.href = "/api/logout";
   };
 
-  const getUserInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getUserInitials = (firstName?: string | null, lastName?: string | null, email?: string | null) => {
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    }
+    if (firstName) {
+      return firstName.charAt(0).toUpperCase();
+    }
+    if (email) {
+      return email.charAt(0).toUpperCase();
+    }
+    return "U";
   };
 
   return (
@@ -147,14 +156,14 @@ export default function Header() {
                 <DropdownMenu>
                   <DropdownMenuTrigger className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg px-2 py-1 transition-colors" data-testid="dropdown-user-profile">
                     <Avatar className="w-8 h-8">
-                      <AvatarImage src={user.profileImageUrl} alt={`${user.firstName} ${user.lastName}`} />
+                      <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || "User"} />
                       <AvatarFallback className="bg-blue-500 text-white text-sm font-medium">
-                        {getUserInitials(user.firstName, user.lastName)}
+                        {getUserInitials(user.firstName, user.lastName, user.email)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden sm:block text-left">
                       <p className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-username">
-                        {user.firstName} {user.lastName}
+                        {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || "User"}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-email">
                         {user.email}
