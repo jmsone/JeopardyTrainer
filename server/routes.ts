@@ -358,9 +358,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Anytime Test Questions
-  app.get("/api/anytime-test-questions", async (req, res) => {
+  app.get("/api/anytime-test-questions", isAuthenticated, async (req: any, res) => {
     try {
-      const questions = await storage.getAnytimeTestSet();
+      const userId = req.user.claims.sub;
+      const questions = await storage.getAnytimeTestSet(userId);
       res.json(questions);
     } catch (error) {
       console.error("Failed to get anytime test questions:", error);

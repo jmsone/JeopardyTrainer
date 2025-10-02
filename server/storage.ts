@@ -80,7 +80,7 @@ export interface IStorage {
   // Test Attempts
   createTestAttempt(attempt: InsertTestAttempt): Promise<TestAttempt>;
   getTestAttempts(mode?: "anytime_test"): Promise<TestAttempt[]>;
-  getAnytimeTestSet(): Promise<QuestionWithCategory[]>;
+  getAnytimeTestSet(userId?: string): Promise<QuestionWithCategory[]>;
   
   // Readiness Calculation
   getReadinessScore(): Promise<ReadinessScore>;
@@ -842,15 +842,26 @@ export class MemStorage implements IStorage {
     return attempts;
   }
 
-  async getAnytimeTestSet(): Promise<QuestionWithCategory[]> {
+  async getAnytimeTestSet(userId?: string): Promise<QuestionWithCategory[]> {
     // Get 50 questions with diverse category coverage
+    // Avoid recently answered game board questions to prevent overlap
     const categories = Array.from(this.categories.values());
     const questions: QuestionWithCategory[] = [];
+    
+    // Get recently answered game board questions (last 30 days) to avoid overlap
+    const recentGameAnswers = userId ? 
+      Array.from(this.userProgress.values()).filter(p => {
+        if (p.userId !== userId || p.mode !== 'game') return false;
+        const daysSinceAnswer = (new Date().getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceAnswer <= 30;
+      }).map(p => p.questionId) : [];
+    
+    const excludeIds = new Set(recentGameAnswers);
     
     // Try to get one question per category first
     for (const category of categories) {
       const categoryQuestions = Array.from(this.questions.values())
-        .filter(q => q.categoryId === category.id);
+        .filter(q => q.categoryId === category.id && !excludeIds.has(q.id));
       
       if (categoryQuestions.length > 0) {
         const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
@@ -867,7 +878,7 @@ export class MemStorage implements IStorage {
     while (questions.length < 50) {
       const allQuestions = Array.from(this.questions.values());
       const usedIds = new Set(questions.map(q => q.id));
-      const availableQuestions = allQuestions.filter(q => !usedIds.has(q.id));
+      const availableQuestions = allQuestions.filter(q => !usedIds.has(q.id) && !excludeIds.has(q.id));
       
       if (availableQuestions.length === 0) break;
       
