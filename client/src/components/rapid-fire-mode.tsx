@@ -318,7 +318,7 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
       </div>
 
       {/* Session Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className={`grid ${isAnytimeTest ? 'grid-cols-2' : 'grid-cols-3'} gap-4 mb-6`}>
         <Card className="p-3 text-center">
           <div className="text-lg font-bold text-accent" data-testid="stat-correct">
             {sessionStats.correct}
@@ -331,12 +331,14 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
           </div>
           <div className="text-xs text-muted-foreground">Incorrect</div>
         </Card>
-        <Card className="p-3 text-center">
-          <div className="text-lg font-bold text-secondary" data-testid="stat-unsure">
-            {sessionStats.unsure}
-          </div>
-          <div className="text-xs text-muted-foreground">Unsure</div>
-        </Card>
+        {!isAnytimeTest && (
+          <Card className="p-3 text-center">
+            <div className="text-lg font-bold text-secondary" data-testid="stat-unsure">
+              {sessionStats.unsure}
+            </div>
+            <div className="text-xs text-muted-foreground">Unsure</div>
+          </Card>
+        )}
       </div>
 
       {/* Question Card */}
@@ -372,7 +374,7 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
               
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">How did you do?</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className={`grid ${isAnytimeTest ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
                   <Button
                     onClick={() => handleSelfAssessment("correct")}
                     className="bg-accent text-accent-foreground hover:bg-accent/90"
@@ -387,13 +389,15 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
                   >
                     ✗ Incorrect
                   </Button>
-                  <Button
-                    onClick={() => handleSelfAssessment("unsure")}
-                    variant="secondary"
-                    data-testid="button-self-unsure"
-                  >
-                    ? Unsure
-                  </Button>
+                  {!isAnytimeTest && (
+                    <Button
+                      onClick={() => handleSelfAssessment("unsure")}
+                      variant="secondary"
+                      data-testid="button-self-unsure"
+                    >
+                      ? Unsure
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
