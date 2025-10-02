@@ -131,26 +131,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const progress = await storage.createUserProgress(validatedData);
       console.log("📊 Progress saved:", progress);
       
-      // Update spaced repetition data
-      const srData = await storage.getSpacedRepetitionForQuestion(validatedData.questionId);
-      if (srData) {
-        const { easeFactor, interval, repetitions } = calculateSpacedRepetition(
-          srData.easeFactor,
-          srData.interval,
-          srData.repetitions,
-          validatedData.correct
-        );
-        
-        const nextReview = new Date();
-        nextReview.setDate(nextReview.getDate() + interval);
-        
-        await storage.updateSpacedRepetition(srData.id, {
-          easeFactor,
-          interval,
-          repetitions,
-          nextReview,
-          lastReviewed: new Date(),
-        });
+      // Update spaced repetition data ONLY for game mode (not anytime_test or rapid_fire)
+      // This keeps Anytime Test isolated from affecting game board questions
+      if (validatedData.mode === 'game') {
+        const srData = await storage.getSpacedRepetitionForQuestion(validatedData.questionId);
+        if (srData) {
+          const { easeFactor, interval, repetitions } = calculateSpacedRepetition(
+            srData.easeFactor,
+            srData.interval,
+            srData.repetitions,
+            validatedData.correct
+          );
+          
+          const nextReview = new Date();
+          nextReview.setDate(nextReview.getDate() + interval);
+          
+          await storage.updateSpacedRepetition(srData.id, {
+            easeFactor,
+            interval,
+            repetitions,
+            nextReview,
+            lastReviewed: new Date(),
+          });
+        }
       }
 
       // 🚨 CRITICAL FIX: Trigger achievement detection after saving progress
