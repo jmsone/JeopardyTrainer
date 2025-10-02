@@ -30,6 +30,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category frequency weighting for 2025 relevance
 
 ## Recent Changes
+- **Anytime Test 50-question fix** - Added 20 more questions to seed data (now 50 total), fixed logic to complete all 50 questions (2025-10-02)
 - **Anytime Test isolation** - Test uses different questions from game board, doesn't affect spaced repetition, only Correct/Incorrect options (2025-10-02)
 - **Complete authentication system** - Integrated Replit Auth with Google OAuth, session management, user profiles, logout (2025-09-30)
 - **Rebranded to "The Daily Double Down"** - Updated all UI components, page titles, meta tags (2025-09-30)
