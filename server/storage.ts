@@ -533,12 +533,17 @@ export class MemStorage implements IStorage {
     return { ...question, category };
   }
 
-  async getAnsweredQuestions(userId?: string): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]> {
+  async getAnsweredQuestions(userId?: string, mode?: "game" | "rapid_fire" | "anytime_test"): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]> {
     let progressEntries = Array.from(this.userProgress.values());
     
     // Filter by userId if provided
     if (userId) {
       progressEntries = progressEntries.filter(p => p.userId === userId);
+    }
+    
+    // Filter by mode if provided
+    if (mode) {
+      progressEntries = progressEntries.filter(p => p.mode === mode);
     }
     
     return progressEntries.map(p => ({ 
