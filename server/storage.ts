@@ -169,6 +169,9 @@ export class MemStorage implements IStorage {
         { text: "This 1066 battle saw William the Conqueror defeat King Harold II of England.", answer: "What is the Battle of Hastings?", value: 600, difficulty: 3 },
         { text: "This 1789-1799 period in France saw the overthrow of the monarchy and the rise of Napoleon.", answer: "What is the French Revolution?", value: 800, difficulty: 4 },
         { text: "This treaty signed in 1919 officially ended World War I between Germany and the Allied Powers.", answer: "What is the Treaty of Versailles?", value: 1000, difficulty: 5 },
+        { text: "This 16th-century Spanish fleet was defeated by England in 1588.", answer: "What is the Spanish Armada?", value: 200, difficulty: 1 },
+        { text: "This wall built across northern Britain by the Romans was named after Emperor Hadrian.", answer: "What is Hadrian's Wall?", value: 400, difficulty: 2 },
+        { text: "This 1945 meeting of Allied leaders took place in the German city of Potsdam.", answer: "What is the Potsdam Conference?", value: 600, difficulty: 3 },
       ],
       "Science & Nature": [
         { text: "This element has the chemical symbol Au and atomic number 79.", answer: "What is gold?", value: 200, difficulty: 1 },
@@ -176,6 +179,9 @@ export class MemStorage implements IStorage {
         { text: "This scientist developed the theory of evolution by natural selection.", answer: "Who is Charles Darwin?", value: 600, difficulty: 3 },
         { text: "This fundamental force is responsible for radioactive decay and nuclear fusion in stars.", answer: "What is the weak nuclear force?", value: 800, difficulty: 4 },
         { text: "This quantum mechanical principle states that you cannot know both the position and momentum of a particle precisely.", answer: "What is Heisenberg's Uncertainty Principle?", value: 1000, difficulty: 5 },
+        { text: "This gas makes up about 78% of Earth's atmosphere.", answer: "What is nitrogen?", value: 200, difficulty: 1 },
+        { text: "This organ pumps blood throughout the human body.", answer: "What is the heart?", value: 400, difficulty: 2 },
+        { text: "This type of rock is formed from cooled and solidified lava or magma.", answer: "What is igneous rock?", value: 600, difficulty: 3 },
       ],
       "Literature": [
         { text: "This Shakespeare play features the characters Rosencrantz and Guildenstern.", answer: "What is Hamlet?", value: 200, difficulty: 1 },
@@ -183,6 +189,10 @@ export class MemStorage implements IStorage {
         { text: "This epic poem by Homer tells the story of Odysseus' journey home from the Trojan War.", answer: "What is The Odyssey?", value: 600, difficulty: 3 },
         { text: "This Russian author wrote 'War and Peace' and 'Anna Karenina'.", answer: "Who is Leo Tolstoy?", value: 800, difficulty: 4 },
         { text: "This James Joyce novel follows Leopold Bloom through a single day in Dublin.", answer: "What is Ulysses?", value: 1000, difficulty: 5 },
+        { text: "This American author wrote 'The Great Gatsby'.", answer: "Who is F. Scott Fitzgerald?", value: 200, difficulty: 1 },
+        { text: "This dystopian novel by George Orwell features Big Brother.", answer: "What is 1984?", value: 400, difficulty: 2 },
+        { text: "This Hemingway novel is about an old Cuban fisherman.", answer: "What is The Old Man and the Sea?", value: 600, difficulty: 3 },
+        { text: "This Mark Twain character travels down the Mississippi River with Jim.", answer: "Who is Huckleberry Finn?", value: 800, difficulty: 4 },
       ],
       "Geography": [
         { text: "This is the capital city of Australia.", answer: "What is Canberra?", value: 200, difficulty: 1 },
@@ -190,6 +200,9 @@ export class MemStorage implements IStorage {
         { text: "This mountain range separates Europe from Asia.", answer: "What are the Ural Mountains?", value: 600, difficulty: 3 },
         { text: "This African country is completely surrounded by South Africa.", answer: "What is Lesotho?", value: 800, difficulty: 4 },
         { text: "This is the deepest point on Earth's surface, located in the Pacific Ocean.", answer: "What is the Mariana Trench?", value: 1000, difficulty: 5 },
+        { text: "This is the smallest country in the world by area.", answer: "What is Vatican City?", value: 200, difficulty: 1 },
+        { text: "This desert is the largest hot desert in the world.", answer: "What is the Sahara Desert?", value: 400, difficulty: 2 },
+        { text: "This strait separates Spain from Morocco.", answer: "What is the Strait of Gibraltar?", value: 600, difficulty: 3 },
       ],
       "Sports": [
         { text: "This 1969 music festival took place on Max Yasgur's dairy farm in Bethel, New York.", answer: "What is Woodstock?", value: 200, difficulty: 1 },
@@ -197,6 +210,9 @@ export class MemStorage implements IStorage {
         { text: "This boxer was known as 'The Greatest' and 'The Louisville Lip'.", answer: "Who is Muhammad Ali?", value: 600, difficulty: 3 },
         { text: "This golfer has won the most major championships in history with 18 titles.", answer: "Who is Jack Nicklaus?", value: 800, difficulty: 4 },
         { text: "This Olympic sport combines swimming, cycling, and running in succession.", answer: "What is triathlon?", value: 1000, difficulty: 5 },
+        { text: "This sport is known as 'the beautiful game'.", answer: "What is soccer (or football)?", value: 200, difficulty: 1 },
+        { text: "This NBA team has won the most championships with 17 titles.", answer: "Who are the Boston Celtics (or Los Angeles Lakers)?", value: 400, difficulty: 2 },
+        { text: "This country has won the most FIFA World Cup titles.", answer: "What is Brazil?", value: 600, difficulty: 3 },
       ],
       "Entertainment": [
         { text: "This director created the 'Star Wars' saga.", answer: "Who is George Lucas?", value: 200, difficulty: 1 },
@@ -204,6 +220,10 @@ export class MemStorage implements IStorage {
         { text: "This Alfred Hitchcock film features the famous shower scene at the Bates Motel.", answer: "What is Psycho?", value: 600, difficulty: 3 },
         { text: "This composer wrote 'The Four Seasons' violin concertos.", answer: "Who is Antonio Vivaldi?", value: 800, difficulty: 4 },
         { text: "This opera by Puccini tells the story of an artist in Paris and features the aria 'O soave fanciulla'.", answer: "What is La Bohème?", value: 1000, difficulty: 5 },
+        { text: "This British band released the album 'Abbey Road' in 1969.", answer: "Who are The Beatles?", value: 200, difficulty: 1 },
+        { text: "This streaming service created the series 'Stranger Things'.", answer: "What is Netflix?", value: 400, difficulty: 2 },
+        { text: "This actor played Iron Man in the Marvel Cinematic Universe.", answer: "Who is Robert Downey Jr.?", value: 600, difficulty: 3 },
+        { text: "This theme park in Orlando, Florida opened in 1971 and is known as 'The Most Magical Place on Earth'.", answer: "What is Walt Disney World?", value: 800, difficulty: 4 },
       ],
     };
 
@@ -844,24 +864,43 @@ export class MemStorage implements IStorage {
 
   async getAnytimeTestSet(userId?: string): Promise<QuestionWithCategory[]> {
     // Get 50 questions with diverse category coverage
-    // Avoid recently answered game board questions to prevent overlap
+    // Avoid recently answered game board questions when possible
     const categories = Array.from(this.categories.values());
     const questions: QuestionWithCategory[] = [];
     
-    // Get recently answered game board questions (last 30 days) to avoid overlap
+    // Get recently answered game board questions (last 7 days for strong avoid, last 30 days for soft avoid)
     const recentGameAnswers = userId ? 
       Array.from(this.userProgress.values()).filter(p => {
         if (p.userId !== userId || p.mode !== 'game') return false;
         const daysSinceAnswer = (new Date().getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24);
         return daysSinceAnswer <= 30;
-      }).map(p => p.questionId) : [];
+      }).map(p => ({ questionId: p.questionId, days: (new Date().getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24) })) : [];
     
-    const excludeIds = new Set(recentGameAnswers);
+    const strongAvoid = new Set(recentGameAnswers.filter(q => q.days <= 7).map(q => q.questionId));
+    const softAvoid = new Set(recentGameAnswers.filter(q => q.days > 7 && q.days <= 30).map(q => q.questionId));
+    
+    // Helper function to get questions with filtering preference
+    const getQuestionsWithPreference = (categoryId?: string, excludeUsed: Set<string> = new Set()): Question[] => {
+      const allQuestions = Array.from(this.questions.values());
+      const baseFilter = categoryId ? allQuestions.filter(q => q.categoryId === categoryId) : allQuestions;
+      
+      // First try: exclude used AND strongly avoid recent game questions
+      let filtered = baseFilter.filter(q => !excludeUsed.has(q.id) && !strongAvoid.has(q.id));
+      if (filtered.length > 0) return filtered;
+      
+      // Second try: exclude used AND soft avoid, but allow strongly avoided if needed
+      filtered = baseFilter.filter(q => !excludeUsed.has(q.id) && !softAvoid.has(q.id));
+      if (filtered.length > 0) return filtered;
+      
+      // Last resort: just exclude already used questions
+      return baseFilter.filter(q => !excludeUsed.has(q.id));
+    };
+    
+    const usedIds = new Set<string>();
     
     // Try to get one question per category first
     for (const category of categories) {
-      const categoryQuestions = Array.from(this.questions.values())
-        .filter(q => q.categoryId === category.id && !excludeIds.has(q.id));
+      const categoryQuestions = getQuestionsWithPreference(category.id, usedIds);
       
       if (categoryQuestions.length > 0) {
         const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
@@ -869,6 +908,7 @@ export class MemStorage implements IStorage {
           ...randomQuestion,
           category
         });
+        usedIds.add(randomQuestion.id);
       }
       
       if (questions.length >= 50) break;
@@ -876,11 +916,9 @@ export class MemStorage implements IStorage {
     
     // Fill remaining slots with random questions if needed
     while (questions.length < 50) {
-      const allQuestions = Array.from(this.questions.values());
-      const usedIds = new Set(questions.map(q => q.id));
-      const availableQuestions = allQuestions.filter(q => !usedIds.has(q.id) && !excludeIds.has(q.id));
+      const availableQuestions = getQuestionsWithPreference(undefined, usedIds);
       
-      if (availableQuestions.length === 0) break;
+      if (availableQuestions.length === 0) break; // Truly no more questions available
       
       const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
       const category = this.categories.get(randomQuestion.categoryId);
@@ -890,6 +928,7 @@ export class MemStorage implements IStorage {
           ...randomQuestion,
           category
         });
+        usedIds.add(randomQuestion.id);
       }
     }
     

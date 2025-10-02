@@ -110,8 +110,9 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
   });
 
   const currentQuestion = questions?.[currentQuestionIndex];
-  const totalQuestions = isAnytimeTest ? 50 : (questions?.length || 0);
-  const progress = totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0;
+  const totalQuestions = questions?.length || 0;
+  const displayTotal = isAnytimeTest ? 50 : totalQuestions;
+  const progress = displayTotal > 0 ? ((currentQuestionIndex + 1) / displayTotal) * 100 : 0;
 
   const handleSelfAssessment = async (assessment: "correct" | "incorrect" | "unsure", isAutoAdvance = false) => {
     if (!currentQuestion) return;
@@ -293,7 +294,7 @@ export default function RapidFireMode({ settings, onBack, isAnytimeTest = false 
             {isAnytimeTest ? "Anytime! Test" : "Rapid Fire Mode"}
           </div>
           <div className="font-bold" data-testid="text-question-counter">
-            Question {currentQuestionIndex + 1} of {totalQuestions}
+            Question {currentQuestionIndex + 1} of {displayTotal}
           </div>
           {isAnytimeTest && !showAnswer && (
             <div className="flex items-center justify-end mt-1">
