@@ -63,11 +63,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get answered questions
+  // Get answered questions (only for game mode by default, to keep Anytime Test isolated)
   app.get("/api/answered-questions", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const answeredQuestions = await storage.getAnsweredQuestions(userId);
+      const answeredQuestions = await storage.getAnsweredQuestions(userId, "game");
       res.json(answeredQuestions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch answered questions" });
