@@ -31,7 +31,8 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category diversity in question selection
 
 ## Recent Changes
-- **✅ Fixed difficulty-value correlation** - Refactored to sort ALL 50 questions globally by difficulty before distributing across board. First 30 questions (easiest) assigned sequentially ensures $200 rows get easy questions, $1000 rows get hard questions. Guarantees proper progression. (2025-10-03)
+- **✅ Diverse category implementation** - Now fetches from 6 predefined categories (General Knowledge, History, Geography, Science & Nature, Sports, Art) instead of random questions. Guarantees category variety while maintaining difficulty progression. (2025-10-03)
+- **✅ Fixed difficulty-value correlation** - Refactored to sort ALL questions globally by difficulty before distributing across board. First 30 questions (easiest) assigned sequentially ensures $200 rows get easy questions, $1000 rows get hard questions. Guarantees proper progression. (2025-10-03)
 - **⚠️ CRITICAL: Migrated from jService to Open Trivia DB** - jService.io API permanently shut down (HTTP 410) in October 2025. Replaced with Open Trivia Database for continued functionality. Note: Questions are now general trivia, NOT authentic Jeopardy data. Air dates removed as Open Trivia DB doesn't provide them. (2025-10-03)
 - **Anytime Test isolation fix** - Fixed game board showing Anytime Test questions as completed by filtering answered questions by mode (2025-10-02)
 - **Anytime Test 50-question fix** - Added 20 more questions to seed data (now 50 total), fixed logic to complete all 50 questions (2025-10-02)
