@@ -156,11 +156,7 @@ export class MemStorage implements IStorage {
     try {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
-      // Clear existing categories and questions
-      this.categories.clear();
-      this.questions.clear();
-      
-      // Fetch 30 random questions from Open Trivia DB
+      // Fetch 30 random questions from Open Trivia DB FIRST (before clearing existing data)
       const triviaQuestions = await openTDBClient.getRandomQuestions(30);
       console.log(`📝 Fetched ${triviaQuestions.length} questions from Open Trivia DB`);
       
@@ -173,6 +169,11 @@ export class MemStorage implements IStorage {
         categoryQuestions.get(q.category)!.push(q);
       }
       
+      // Prepare new data structures
+      const newCategories = new Map<string, Category>();
+      const newQuestions = new Map<string, Question>();
+      const newSpacedRepetition = new Map<string, SpacedRepetition>();
+      
       // Create categories and questions (limit to 6 categories for game board)
       const categoryNames = Array.from(categoryQuestions.keys()).slice(0, 6);
       const values = [200, 400, 600, 800, 1000];
@@ -184,7 +185,7 @@ export class MemStorage implements IStorage {
           name: categoryName,
           weight: 1.0
         };
-        this.categories.set(category.id, category);
+        newCategories.set(category.id, category);
         
         // Get questions for this category
         const questions = categoryQuestions.get(categoryName)!;
@@ -206,7 +207,7 @@ export class MemStorage implements IStorage {
             jServiceId: null
           };
           
-          this.questions.set(question.id, question);
+          newQuestions.set(question.id, question);
           
           // Initialize spaced repetition data for each question
           const srData: SpacedRepetition = {
@@ -219,10 +220,21 @@ export class MemStorage implements IStorage {
             nextReview: new Date(),
             lastReviewed: null,
           };
-          this.spacedRepetition.set(srData.id, srData);
+          newSpacedRepetition.set(srData.id, srData);
         }
         
-        console.log(`   ✅ Added ${Math.min(5, questions.length)} questions for ${categoryName}`);
+        console.log(`   ✅ Prepared ${Math.min(5, questions.length)} questions for ${categoryName}`);
+      }
+      
+      // Only clear and replace after successful fetch
+      this.categories.clear();
+      this.questions.clear();
+      this.categories = newCategories;
+      this.questions = newQuestions;
+      
+      // Add new spaced repetition data (append to existing user data)
+      for (const [key, value] of newSpacedRepetition) {
+        this.spacedRepetition.set(key, value);
       }
       
       const totalQuestions = this.questions.size;
@@ -231,7 +243,14 @@ export class MemStorage implements IStorage {
       this.initialized = true;
     } catch (error) {
       console.error('❌ Failed to fetch fresh game board:', error);
-      throw error;
+      
+      // If not initialized yet and we have no fallback, keep error thrown
+      if (!this.initialized) {
+        throw error;
+      }
+      
+      // If already initialized, keep existing data and log error
+      console.warn('⚠️  Keeping existing game board due to API error');
     }
   }
 

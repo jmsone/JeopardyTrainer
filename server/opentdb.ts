@@ -17,9 +17,54 @@ interface OpenTDBResponse {
 
 export class OpenTDBClient {
   private baseUrl = 'https://opentdb.com/api.php';
+  private lastRequestTime = 0;
+  private minRequestInterval = 5000; // Open Trivia DB: 1 request per 5 seconds
+  
+  // Retry logic with exponential backoff for rate limiting
+  private async fetchWithRetry<T>(
+    fetchFn: () => Promise<T>, 
+    maxRetries: number = 3,
+    baseDelay: number = 2000
+  ): Promise<T> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Rate limiting: wait if needed
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        if (timeSinceLastRequest < this.minRequestInterval) {
+          const waitTime = this.minRequestInterval - timeSinceLastRequest;
+          console.log(`⏱️  Rate limiting: waiting ${waitTime}ms before request`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.lastRequestTime = Date.now();
+        const result = await fetchFn();
+        
+        if (attempt > 0) {
+          console.log(`✅ Request succeeded after ${attempt} retries`);
+        }
+        
+        return result;
+      } catch (error: any) {
+        const isLastAttempt = attempt === maxRetries;
+        const isRateLimited = error.message?.includes('429') || error.message?.includes('500');
+        
+        if (isLastAttempt || !isRateLimited) {
+          throw error;
+        }
+        
+        // Exponential backoff: 2s, 4s, 8s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.warn(`⚠️  Request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`, error.message);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw new Error('Max retries exceeded');
+  }
   
   async getRandomQuestions(count: number = 30): Promise<OpenTDBQuestion[]> {
-    try {
+    return this.fetchWithRetry(async () => {
       // Open Trivia DB limits to 50 questions per call
       const actualCount = Math.min(count, 50);
       const response = await fetch(`${this.baseUrl}?amount=${actualCount}`);
@@ -32,14 +77,11 @@ export class OpenTDBClient {
       }
       
       return data.results;
-    } catch (error) {
-      console.error('Failed to fetch questions from Open Trivia DB:', error);
-      throw error;
-    }
+    });
   }
 
   async getQuestionsByCategory(categoryId: number, count: number = 10): Promise<OpenTDBQuestion[]> {
-    try {
+    return this.fetchWithRetry(async () => {
       const actualCount = Math.min(count, 50);
       const response = await fetch(`${this.baseUrl}?amount=${actualCount}&category=${categoryId}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -51,10 +93,7 @@ export class OpenTDBClient {
       }
       
       return data.results;
-    } catch (error) {
-      console.error(`Failed to fetch questions for category ${categoryId}:`, error);
-      throw error;
-    }
+    });
   }
 
   // Convert difficulty to dollar value (Jeopardy-style)
