@@ -122,7 +122,15 @@ export class OpenTDBClient {
       '&mdash;': '—',
     };
     
-    return text.replace(/&[^;]+;/g, (entity) => entities[entity] || entity);
+    // Decode entities multiple times to handle double-encoding
+    let decoded = text;
+    let prevDecoded = '';
+    while (decoded !== prevDecoded) {
+      prevDecoded = decoded;
+      decoded = decoded.replace(/&[^;]+;/g, (entity) => entities[entity] || entity);
+    }
+    
+    return decoded;
   }
 
   // Convert Open Trivia DB question to our internal format

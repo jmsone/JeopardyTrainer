@@ -156,13 +156,33 @@ export class MemStorage implements IStorage {
     try {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
-      // Fetch 50 random questions from Open Trivia DB FIRST (before clearing existing data)
-      const triviaQuestions = await openTDBClient.getRandomQuestions(50);
-      console.log(`📝 Fetched ${triviaQuestions.length} questions from Open Trivia DB`);
+      // Define diverse category mix using Open Trivia DB category IDs
+      const diverseCategories = [
+        { id: 9, name: 'General Knowledge' },
+        { id: 23, name: 'History' },
+        { id: 22, name: 'Geography' },
+        { id: 17, name: 'Science & Nature' },
+        { id: 21, name: 'Sports' },
+        { id: 25, name: 'Art' }
+      ];
+      
+      // Fetch questions from each category (8 questions per category = 48 total)
+      const allQuestions: any[] = [];
+      for (const cat of diverseCategories) {
+        try {
+          const questions = await openTDBClient.getQuestionsByCategory(cat.id, 8);
+          console.log(`   📚 Fetched ${questions.length} questions from ${cat.name}`);
+          allQuestions.push(...questions);
+        } catch (error) {
+          console.warn(`   ⚠️  Failed to fetch ${cat.name}, skipping...`);
+        }
+      }
+      
+      console.log(`📝 Total fetched: ${allQuestions.length} questions from ${diverseCategories.length} categories`);
       
       // Sort ALL questions by difficulty: easy → medium → hard
       const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
-      const allSortedQuestions = [...triviaQuestions].sort((a, b) => {
+      const allSortedQuestions = [...allQuestions].sort((a, b) => {
         const orderA = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2;
         const orderB = difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2;
         return orderA - orderB;
@@ -173,7 +193,6 @@ export class MemStorage implements IStorage {
       console.log(`📊 Selected 30 questions by difficulty: ${selectedQuestions.filter(q => q.difficulty === 'easy').length} easy, ${selectedQuestions.filter(q => q.difficulty === 'medium').length} medium, ${selectedQuestions.filter(q => q.difficulty === 'hard').length} hard`);
       
       // Group into 6 categories (5 questions each)
-      const categories: Array<{ name: string; questions: typeof selectedQuestions }> = [];
       const categoryMap = new Map<string, typeof selectedQuestions>();
       
       for (const q of selectedQuestions) {
