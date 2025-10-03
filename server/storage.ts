@@ -487,12 +487,9 @@ export class MemStorage implements IStorage {
   async getCategories(): Promise<Category[]> {
     // Auto-initialize if not loaded yet
     if (!this.initialized) {
-      console.log('🔄 Categories requested but not initialized, fetching game board...');
       await this.fetchFreshGameBoard();
     }
-    const categories = Array.from(this.categories.values());
-    console.log(`📋 Returning ${categories.length} categories`);
-    return categories;
+    return Array.from(this.categories.values());
   }
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
