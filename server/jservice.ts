@@ -49,6 +49,7 @@ interface JServiceRandomClues {
 
 export class JServiceClient {
   private baseUrl = 'https://jservice.io/api';
+  private minDate = '2000-01-01'; // Only fetch questions from 2000 onwards
 
   async getRandomCategories(count: number = 6): Promise<JServiceCategory[]> {
     try {
@@ -63,7 +64,7 @@ export class JServiceClient {
 
   async getCluesForCategory(categoryId: number, count: number = 10): Promise<JServiceClue[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/clues?category=${categoryId}`);
+      const response = await fetch(`${this.baseUrl}/clues?category=${categoryId}&min_date=${this.minDate}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const clues = await response.json();
       
@@ -74,6 +75,7 @@ export class JServiceClient {
           clue.answer && 
           clue.value && 
           clue.value > 0 &&
+          clue.airdate && new Date(clue.airdate) >= new Date(this.minDate) &&
           !clue.question.includes('audio') &&
           !clue.question.includes('video') &&
           !clue.question.includes('seen here') &&
@@ -88,21 +90,26 @@ export class JServiceClient {
 
   async getRandomClues(count: number = 30): Promise<JServiceRandomClues[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/random?count=${count}`);
+      // Fetch more than needed to account for filtering
+      const response = await fetch(`${this.baseUrl}/random?count=${count * 3}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const clues = await response.json();
       
-      // Filter out invalid clues
-      return clues.filter((clue: JServiceRandomClues) => 
+      // Filter out invalid clues and old questions
+      const filtered = clues.filter((clue: JServiceRandomClues) => 
         clue.question && 
         clue.answer && 
         clue.value && 
         clue.value > 0 &&
+        clue.airdate && new Date(clue.airdate) >= new Date(this.minDate) &&
         !clue.question.includes('audio') &&
         !clue.question.includes('video') &&
         !clue.question.includes('seen here') &&
         !clue.question.includes('this image')
       );
+      
+      // Return up to the requested count
+      return filtered.slice(0, count);
     } catch (error) {
       console.error('Failed to fetch random clues from jService:', error);
       throw error;
