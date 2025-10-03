@@ -33,6 +33,7 @@ import {
   type NotificationWithAction
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { jServiceClient } from "./jservice";
 
 export interface IStorage {
   // User operations (IMPORTANT) - mandatory for Replit Auth
@@ -138,124 +139,112 @@ export class MemStorage implements IStorage {
   private notifications: Map<string, Notification> = new Map();
   private userGoals: Map<string, UserGoals> = new Map();
 
+  private initialized = false;
+
   constructor() {
     this.initializeData();
   }
 
   private initializeData() {
-    // Initialize with sample Jeopardy categories
-    const sampleCategories: InsertCategory[] = [
-      { name: "World History", weight: 2.0 },
-      { name: "Science & Nature", weight: 1.8 },
-      { name: "Literature", weight: 1.5 },
-      { name: "Geography", weight: 1.7 },
-      { name: "Sports", weight: 1.3 },
-      { name: "Entertainment", weight: 1.4 },
-    ];
-
-    sampleCategories.forEach(cat => {
-      const category: Category = { ...cat, id: randomUUID(), weight: cat.weight || 1.0 };
-      this.categories.set(category.id, category);
-    });
-
-    // Create questions for each category and dollar value
-    const categoryArray = Array.from(this.categories.values());
-    const values = [200, 400, 600, 800, 1000];
-    
-    const sampleQuestions: { [key: string]: Omit<InsertQuestion, 'categoryId'>[] } = {
-      "World History": [
-        { text: "This French emperor was exiled to the island of Elba in 1814, only to return for the famous 'Hundred Days' before his final defeat at Waterloo.", answer: "Who is Napoleon Bonaparte?", value: 200, difficulty: 1 },
-        { text: "This ancient wonder of the world was a lighthouse built on the island of Pharos near Alexandria, Egypt.", answer: "What is the Lighthouse of Alexandria?", value: 400, difficulty: 2 },
-        { text: "This 1066 battle saw William the Conqueror defeat King Harold II of England.", answer: "What is the Battle of Hastings?", value: 600, difficulty: 3 },
-        { text: "This 1789-1799 period in France saw the overthrow of the monarchy and the rise of Napoleon.", answer: "What is the French Revolution?", value: 800, difficulty: 4 },
-        { text: "This treaty signed in 1919 officially ended World War I between Germany and the Allied Powers.", answer: "What is the Treaty of Versailles?", value: 1000, difficulty: 5 },
-        { text: "This 16th-century Spanish fleet was defeated by England in 1588.", answer: "What is the Spanish Armada?", value: 200, difficulty: 1 },
-        { text: "This wall built across northern Britain by the Romans was named after Emperor Hadrian.", answer: "What is Hadrian's Wall?", value: 400, difficulty: 2 },
-        { text: "This 1945 meeting of Allied leaders took place in the German city of Potsdam.", answer: "What is the Potsdam Conference?", value: 600, difficulty: 3 },
-      ],
-      "Science & Nature": [
-        { text: "This element has the chemical symbol Au and atomic number 79.", answer: "What is gold?", value: 200, difficulty: 1 },
-        { text: "This planet is known as the 'Red Planet' due to iron oxide on its surface.", answer: "What is Mars?", value: 400, difficulty: 2 },
-        { text: "This scientist developed the theory of evolution by natural selection.", answer: "Who is Charles Darwin?", value: 600, difficulty: 3 },
-        { text: "This fundamental force is responsible for radioactive decay and nuclear fusion in stars.", answer: "What is the weak nuclear force?", value: 800, difficulty: 4 },
-        { text: "This quantum mechanical principle states that you cannot know both the position and momentum of a particle precisely.", answer: "What is Heisenberg's Uncertainty Principle?", value: 1000, difficulty: 5 },
-        { text: "This gas makes up about 78% of Earth's atmosphere.", answer: "What is nitrogen?", value: 200, difficulty: 1 },
-        { text: "This organ pumps blood throughout the human body.", answer: "What is the heart?", value: 400, difficulty: 2 },
-        { text: "This type of rock is formed from cooled and solidified lava or magma.", answer: "What is igneous rock?", value: 600, difficulty: 3 },
-      ],
-      "Literature": [
-        { text: "This Shakespeare play features the characters Rosencrantz and Guildenstern.", answer: "What is Hamlet?", value: 200, difficulty: 1 },
-        { text: "This author wrote 'Pride and Prejudice' and 'Sense and Sensibility'.", answer: "Who is Jane Austen?", value: 400, difficulty: 2 },
-        { text: "This epic poem by Homer tells the story of Odysseus' journey home from the Trojan War.", answer: "What is The Odyssey?", value: 600, difficulty: 3 },
-        { text: "This Russian author wrote 'War and Peace' and 'Anna Karenina'.", answer: "Who is Leo Tolstoy?", value: 800, difficulty: 4 },
-        { text: "This James Joyce novel follows Leopold Bloom through a single day in Dublin.", answer: "What is Ulysses?", value: 1000, difficulty: 5 },
-        { text: "This American author wrote 'The Great Gatsby'.", answer: "Who is F. Scott Fitzgerald?", value: 200, difficulty: 1 },
-        { text: "This dystopian novel by George Orwell features Big Brother.", answer: "What is 1984?", value: 400, difficulty: 2 },
-        { text: "This Hemingway novel is about an old Cuban fisherman.", answer: "What is The Old Man and the Sea?", value: 600, difficulty: 3 },
-        { text: "This Mark Twain character travels down the Mississippi River with Jim.", answer: "Who is Huckleberry Finn?", value: 800, difficulty: 4 },
-      ],
-      "Geography": [
-        { text: "This is the capital city of Australia.", answer: "What is Canberra?", value: 200, difficulty: 1 },
-        { text: "This South American river is the longest in the world.", answer: "What is the Amazon River?", value: 400, difficulty: 2 },
-        { text: "This mountain range separates Europe from Asia.", answer: "What are the Ural Mountains?", value: 600, difficulty: 3 },
-        { text: "This African country is completely surrounded by South Africa.", answer: "What is Lesotho?", value: 800, difficulty: 4 },
-        { text: "This is the deepest point on Earth's surface, located in the Pacific Ocean.", answer: "What is the Mariana Trench?", value: 1000, difficulty: 5 },
-        { text: "This is the smallest country in the world by area.", answer: "What is Vatican City?", value: 200, difficulty: 1 },
-        { text: "This desert is the largest hot desert in the world.", answer: "What is the Sahara Desert?", value: 400, difficulty: 2 },
-        { text: "This strait separates Spain from Morocco.", answer: "What is the Strait of Gibraltar?", value: 600, difficulty: 3 },
-      ],
-      "Sports": [
-        { text: "This 1969 music festival took place on Max Yasgur's dairy farm in Bethel, New York.", answer: "What is Woodstock?", value: 200, difficulty: 1 },
-        { text: "This tennis tournament is played on grass courts in London each summer.", answer: "What is Wimbledon?", value: 400, difficulty: 2 },
-        { text: "This boxer was known as 'The Greatest' and 'The Louisville Lip'.", answer: "Who is Muhammad Ali?", value: 600, difficulty: 3 },
-        { text: "This golfer has won the most major championships in history with 18 titles.", answer: "Who is Jack Nicklaus?", value: 800, difficulty: 4 },
-        { text: "This Olympic sport combines swimming, cycling, and running in succession.", answer: "What is triathlon?", value: 1000, difficulty: 5 },
-        { text: "This sport is known as 'the beautiful game'.", answer: "What is soccer (or football)?", value: 200, difficulty: 1 },
-        { text: "This NBA team has won the most championships with 17 titles.", answer: "Who are the Boston Celtics (or Los Angeles Lakers)?", value: 400, difficulty: 2 },
-        { text: "This country has won the most FIFA World Cup titles.", answer: "What is Brazil?", value: 600, difficulty: 3 },
-      ],
-      "Entertainment": [
-        { text: "This director created the 'Star Wars' saga.", answer: "Who is George Lucas?", value: 200, difficulty: 1 },
-        { text: "This 1939 film starring Judy Garland features the song 'Over the Rainbow'.", answer: "What is The Wizard of Oz?", value: 400, difficulty: 2 },
-        { text: "This Alfred Hitchcock film features the famous shower scene at the Bates Motel.", answer: "What is Psycho?", value: 600, difficulty: 3 },
-        { text: "This composer wrote 'The Four Seasons' violin concertos.", answer: "Who is Antonio Vivaldi?", value: 800, difficulty: 4 },
-        { text: "This opera by Puccini tells the story of an artist in Paris and features the aria 'O soave fanciulla'.", answer: "What is La Bohème?", value: 1000, difficulty: 5 },
-        { text: "This British band released the album 'Abbey Road' in 1969.", answer: "Who are The Beatles?", value: 200, difficulty: 1 },
-        { text: "This streaming service created the series 'Stranger Things'.", answer: "What is Netflix?", value: 400, difficulty: 2 },
-        { text: "This actor played Iron Man in the Marvel Cinematic Universe.", answer: "Who is Robert Downey Jr.?", value: 600, difficulty: 3 },
-        { text: "This theme park in Orlando, Florida opened in 1971 and is known as 'The Most Magical Place on Earth'.", answer: "What is Walt Disney World?", value: 800, difficulty: 4 },
-      ],
-    };
-
-    categoryArray.forEach(category => {
-      const questionsForCategory = sampleQuestions[category.name] || [];
-      questionsForCategory.forEach(q => {
-        const question: Question = { 
-          ...q, 
-          categoryId: category.id, 
-          id: randomUUID(),
-          difficulty: q.difficulty || 1,
-          airDate: q.airDate || null,
-          jServiceId: q.jServiceId || null
-        };
-        this.questions.set(question.id, question);
-        
-        // Initialize spaced repetition data for each question
-        const srData: SpacedRepetition = {
-          id: randomUUID(),
-          questionId: question.id,
-          easeFactor: 2.5,
-          interval: 1,
-          repetitions: 0,
-          nextReview: new Date(),
-          lastReviewed: null,
-        };
-        this.spacedRepetition.set(srData.id, srData);
-      });
-    });
-
-    // Initialize achievement catalog
+    // Initialize achievement catalog only
+    // Categories and questions will be loaded from jService API on demand
     this.initializeAchievements();
+  }
+
+  // Fetch fresh game board from jService API
+  async fetchFreshGameBoard(): Promise<void> {
+    try {
+      console.log('🎯 Fetching fresh game board from jService API...');
+      
+      // Clear existing categories and questions
+      this.categories.clear();
+      this.questions.clear();
+      
+      // Fetch 6 random categories from jService
+      const jCategories = await jServiceClient.getRandomCategories(6);
+      console.log(`📂 Fetched ${jCategories.length} categories from jService`);
+      
+      // Create our internal categories
+      const categoryMap = new Map<number, string>(); // jService ID -> our ID
+      
+      for (const jCat of jCategories) {
+        const category: Category = {
+          id: randomUUID(),
+          name: jCat.title,
+          weight: 1.0
+        };
+        this.categories.set(category.id, category);
+        categoryMap.set(jCat.id, category.id);
+      }
+      
+      const values = [200, 400, 600, 800, 1000];
+      
+      // Fetch questions for each category
+      for (const jCat of jCategories) {
+        const ourCategoryId = categoryMap.get(jCat.id);
+        if (!ourCategoryId) continue;
+        
+        console.log(`📝 Fetching clues for category: ${jCat.title}`);
+        
+        try {
+          // Fetch 10 clues from jService API for this category
+          const jClues = await jServiceClient.getCluesForCategory(jCat.id, 10);
+          console.log(`   Found ${jClues.length} clues for ${jCat.title}`);
+          
+          if (jClues.length === 0) {
+            console.warn(`   ⚠️ No valid clues found for ${jCat.title}, skipping category`);
+            continue;
+          }
+          
+          // Convert clues to our format
+          const convertedClues = jClues.map(jClue => jServiceClient.convertClue(jClue));
+          
+          // Assign 5 questions to each dollar value (200, 400, 600, 800, 1000)
+          for (let i = 0; i < 5 && i < convertedClues.length; i++) {
+            const clue = convertedClues[i];
+            const assignedValue = values[i];
+            
+            const question: Question = {
+              id: randomUUID(),
+              categoryId: ourCategoryId,
+              text: clue.text,
+              answer: clue.answer,
+              value: assignedValue,
+              difficulty: Math.ceil(assignedValue / 200),
+              airDate: clue.airDate,
+              jServiceId: clue.jServiceId
+            };
+            
+            this.questions.set(question.id, question);
+            
+            // Initialize spaced repetition data for each question (system-level initialization)
+            const srData: SpacedRepetition = {
+              id: randomUUID(),
+              userId: "system",
+              questionId: question.id,
+              easeFactor: 2.5,
+              interval: 1,
+              repetitions: 0,
+              nextReview: new Date(),
+              lastReviewed: null,
+            };
+            this.spacedRepetition.set(srData.id, srData);
+          }
+          
+          console.log(`   ✅ Added 5 questions for ${jCat.title}`);
+        } catch (error) {
+          console.error(`   ❌ Failed to fetch clues for ${jCat.title}:`, error);
+        }
+      }
+      
+      const totalQuestions = this.questions.size;
+      console.log(`✨ Game board initialized with ${totalQuestions} questions from ${this.categories.size} categories`);
+      
+      this.initialized = true;
+    } catch (error) {
+      console.error('❌ Failed to fetch fresh game board:', error);
+      throw error;
+    }
   }
 
   private initializeAchievements() {
@@ -470,6 +459,10 @@ export class MemStorage implements IStorage {
   }
 
   async getCategories(): Promise<Category[]> {
+    // Auto-initialize if not loaded yet
+    if (!this.initialized) {
+      await this.fetchFreshGameBoard();
+    }
     return Array.from(this.categories.values());
   }
 
@@ -481,6 +474,10 @@ export class MemStorage implements IStorage {
   }
 
   async getQuestions(): Promise<Question[]> {
+    // Auto-initialize if not loaded yet
+    if (!this.initialized) {
+      await this.fetchFreshGameBoard();
+    }
     return Array.from(this.questions.values());
   }
 
@@ -576,15 +573,8 @@ export class MemStorage implements IStorage {
     // Clear progress for user (or all if no userId provided)
     await this.clearProgress(userId);
     
-    // Only regenerate global data if no specific user (backward compatibility)
-    if (!userId) {
-      // Clear existing questions and categories
-      this.categories.clear();
-      this.questions.clear();
-      
-      // Re-initialize with fresh data
-      this.initializeData();
-    }
+    // Always fetch fresh questions from jService API
+    await this.fetchFreshGameBoard();
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {
@@ -868,76 +858,49 @@ export class MemStorage implements IStorage {
   }
 
   async getAnytimeTestSet(userId?: string): Promise<QuestionWithCategory[]> {
-    // Get 50 questions with diverse category coverage
-    // Avoid recently answered game board questions when possible
-    const categories = Array.from(this.categories.values());
-    const questions: QuestionWithCategory[] = [];
-    
-    // Get recently answered game board questions (last 7 days for strong avoid, last 30 days for soft avoid)
-    const recentGameAnswers = userId ? 
-      Array.from(this.userProgress.values()).filter(p => {
-        if (p.userId !== userId || p.mode !== 'game') return false;
-        const daysSinceAnswer = (new Date().getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24);
-        return daysSinceAnswer <= 30;
-      }).map(p => ({ questionId: p.questionId, days: (new Date().getTime() - p.answeredAt.getTime()) / (1000 * 60 * 60 * 24) })) : [];
-    
-    const strongAvoid = new Set(recentGameAnswers.filter(q => q.days <= 7).map(q => q.questionId));
-    const softAvoid = new Set(recentGameAnswers.filter(q => q.days > 7 && q.days <= 30).map(q => q.questionId));
-    
-    // Helper function to get questions with filtering preference
-    const getQuestionsWithPreference = (categoryId?: string, excludeUsed: Set<string> = new Set()): Question[] => {
-      const allQuestions = Array.from(this.questions.values());
-      const baseFilter = categoryId ? allQuestions.filter(q => q.categoryId === categoryId) : allQuestions;
+    try {
+      console.log('🎯 Fetching 50 fresh questions from jService for Anytime Test...');
       
-      // First try: exclude used AND strongly avoid recent game questions
-      let filtered = baseFilter.filter(q => !excludeUsed.has(q.id) && !strongAvoid.has(q.id));
-      if (filtered.length > 0) return filtered;
+      // Fetch 50+ random clues from jService API (fetch extra to ensure we get 50 after filtering)
+      const jClues = await jServiceClient.getRandomClues(60);
+      console.log(`📝 Fetched ${jClues.length} clues from jService`);
       
-      // Second try: exclude used AND soft avoid, but allow strongly avoided if needed
-      filtered = baseFilter.filter(q => !excludeUsed.has(q.id) && !softAvoid.has(q.id));
-      if (filtered.length > 0) return filtered;
+      const questions: QuestionWithCategory[] = [];
       
-      // Last resort: just exclude already used questions
-      return baseFilter.filter(q => !excludeUsed.has(q.id));
-    };
-    
-    const usedIds = new Set<string>();
-    
-    // Try to get one question per category first
-    for (const category of categories) {
-      const categoryQuestions = getQuestionsWithPreference(category.id, usedIds);
-      
-      if (categoryQuestions.length > 0) {
-        const randomQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
-        questions.push({
-          ...randomQuestion,
+      // Convert each clue to our format
+      for (let i = 0; i < jClues.length && questions.length < 50; i++) {
+        const jClue = jClues[i];
+        const converted = jServiceClient.convertClue(jClue);
+        
+        // Create a temporary category for this question
+        const category: Category = {
+          id: randomUUID(),
+          name: jClue.category.title,
+          weight: 1.0
+        };
+        
+        const question: QuestionWithCategory = {
+          id: randomUUID(),
+          categoryId: category.id,
+          text: converted.text,
+          answer: converted.answer,
+          value: converted.value,
+          difficulty: converted.difficulty,
+          airDate: converted.airDate,
+          jServiceId: converted.jServiceId,
           category
-        });
-        usedIds.add(randomQuestion.id);
+        };
+        
+        questions.push(question);
       }
       
-      if (questions.length >= 50) break;
+      console.log(`✨ Anytime Test set ready with ${questions.length} fresh questions`);
+      return questions;
+    } catch (error) {
+      console.error('❌ Failed to fetch Anytime Test questions:', error);
+      // Fallback to empty array rather than failing completely
+      return [];
     }
-    
-    // Fill remaining slots with random questions if needed
-    while (questions.length < 50) {
-      const availableQuestions = getQuestionsWithPreference(undefined, usedIds);
-      
-      if (availableQuestions.length === 0) break; // Truly no more questions available
-      
-      const randomQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-      const category = this.categories.get(randomQuestion.categoryId);
-      
-      if (category) {
-        questions.push({
-          ...randomQuestion,
-          category
-        });
-        usedIds.add(randomQuestion.id);
-      }
-    }
-    
-    return questions.slice(0, 50);
   }
 
   async getReadinessScore(): Promise<ReadinessScore> {
