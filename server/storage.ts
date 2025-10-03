@@ -156,28 +156,44 @@ export class MemStorage implements IStorage {
     try {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
-      // Fetch 30 random questions from Open Trivia DB FIRST (before clearing existing data)
-      const triviaQuestions = await openTDBClient.getRandomQuestions(30);
+      // Fetch 50 random questions from Open Trivia DB FIRST (before clearing existing data)
+      const triviaQuestions = await openTDBClient.getRandomQuestions(50);
       console.log(`📝 Fetched ${triviaQuestions.length} questions from Open Trivia DB`);
       
-      // Group questions by category
-      const categoryQuestions = new Map<string, typeof triviaQuestions>();
-      for (const q of triviaQuestions) {
-        if (!categoryQuestions.has(q.category)) {
-          categoryQuestions.set(q.category, []);
+      // Sort ALL questions by difficulty: easy → medium → hard
+      const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
+      const allSortedQuestions = [...triviaQuestions].sort((a, b) => {
+        const orderA = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2;
+        const orderB = difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2;
+        return orderA - orderB;
+      });
+      
+      // Take first 30 questions (guarantees easiest questions come first)
+      const selectedQuestions = allSortedQuestions.slice(0, 30);
+      console.log(`📊 Selected 30 questions by difficulty: ${selectedQuestions.filter(q => q.difficulty === 'easy').length} easy, ${selectedQuestions.filter(q => q.difficulty === 'medium').length} medium, ${selectedQuestions.filter(q => q.difficulty === 'hard').length} hard`);
+      
+      // Group into 6 categories (5 questions each)
+      const categories: Array<{ name: string; questions: typeof selectedQuestions }> = [];
+      const categoryMap = new Map<string, typeof selectedQuestions>();
+      
+      for (const q of selectedQuestions) {
+        if (!categoryMap.has(q.category)) {
+          categoryMap.set(q.category, []);
         }
-        categoryQuestions.get(q.category)!.push(q);
+        categoryMap.get(q.category)!.push(q);
       }
+      
+      // Take up to 6 categories
+      const categoryNames = Array.from(categoryMap.keys()).slice(0, 6);
       
       // Prepare new data structures
       const newCategories = new Map<string, Category>();
       const newQuestions = new Map<string, Question>();
       const newSpacedRepetition = new Map<string, SpacedRepetition>();
-      
-      // Create categories and questions (limit to 6 categories for game board)
-      const categoryNames = Array.from(categoryQuestions.keys()).slice(0, 6);
       const values = [200, 400, 600, 800, 1000];
       
+      // Assign questions to categories and values
+      let questionIndex = 0;
       for (const categoryName of categoryNames) {
         // Create category
         const category: Category = {
@@ -187,14 +203,11 @@ export class MemStorage implements IStorage {
         };
         newCategories.set(category.id, category);
         
-        // Get questions for this category
-        const questions = categoryQuestions.get(categoryName)!;
-        
-        // Create up to 5 questions per category
-        for (let i = 0; i < Math.min(5, questions.length); i++) {
-          const tq = questions[i];
+        // Assign 5 questions to this category from our sorted list
+        for (let i = 0; i < 5 && questionIndex < selectedQuestions.length; i++) {
+          const tq = selectedQuestions[questionIndex++];
           const converted = openTDBClient.convertQuestion(tq);
-          const assignedValue = values[i] || 600;
+          const assignedValue = values[i];
           
           const question: Question = {
             id: randomUUID(),
@@ -209,7 +222,7 @@ export class MemStorage implements IStorage {
           
           newQuestions.set(question.id, question);
           
-          // Initialize spaced repetition data for each question
+          // Initialize spaced repetition data
           const srData: SpacedRepetition = {
             id: randomUUID(),
             userId: "system",
@@ -223,14 +236,20 @@ export class MemStorage implements IStorage {
           newSpacedRepetition.set(srData.id, srData);
         }
         
-        console.log(`   ✅ Prepared ${Math.min(5, questions.length)} questions for ${categoryName}`);
+        console.log(`   ✅ Prepared 5 questions for ${categoryName}`);
       }
       
       // Only clear and replace after successful fetch
       this.categories.clear();
       this.questions.clear();
-      this.categories = newCategories;
-      this.questions = newQuestions;
+      
+      // Copy new data into existing maps
+      for (const [key, value] of newCategories) {
+        this.categories.set(key, value);
+      }
+      for (const [key, value] of newQuestions) {
+        this.questions.set(key, value);
+      }
       
       // Add new spaced repetition data (append to existing user data)
       for (const [key, value] of newSpacedRepetition) {
@@ -468,9 +487,12 @@ export class MemStorage implements IStorage {
   async getCategories(): Promise<Category[]> {
     // Auto-initialize if not loaded yet
     if (!this.initialized) {
+      console.log('🔄 Categories requested but not initialized, fetching game board...');
       await this.fetchFreshGameBoard();
     }
-    return Array.from(this.categories.values());
+    const categories = Array.from(this.categories.values());
+    console.log(`📋 Returning ${categories.length} categories`);
+    return categories;
   }
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
