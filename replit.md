@@ -1,13 +1,13 @@
 # The Daily Double Down
 
 ## Project Overview
-A comprehensive trivia training application featuring Google login authentication via Replit Auth, spaced repetition learning, realistic question data, sophisticated gamification, and comprehensive performance tracking.
+A comprehensive trivia training application featuring Google login authentication via Replit Auth, spaced repetition learning, dynamic question data, sophisticated gamification, and comprehensive performance tracking.
 
 ## Core Features
-- Real Jeopardy questions from authentic data sources
+- Dynamic trivia questions from Open Trivia Database API
 - Spaced repetition learning algorithm based on scientific principles
 - Category performance tracking and improvement analytics
-- Weighted question selection favoring common 2025-era categories
+- Jeopardy-style dollar value system (200-1000)
 - Mobile-first responsive design
 
 ## User Preferences
@@ -19,17 +19,18 @@ A comprehensive trivia training application featuring Google login authenticatio
 ## Technical Architecture
 - Frontend: React with Vite, TypeScript, Tailwind CSS, shadcn/ui
 - Backend: Express.js with TypeScript
-- Database: In-memory storage (expandable to PostgreSQL)
-- Data Sources: Authentic Jeopardy question databases/APIs
+- Database: PostgreSQL (Neon)
+- Data Sources: Open Trivia Database API (opentdb.com)
 - Algorithms: Spaced repetition (SM-2 or similar)
 
 ## Data Quality Measures
-- Authentic Jeopardy data sources only
-- Question-answer accuracy validation
-- Dollar value difficulty correlation
-- Category frequency weighting for 2025 relevance
+- Questions sourced from Open Trivia Database
+- HTML entity decoding for clean display
+- Dollar value assignment based on difficulty (easy=200, medium=600, hard=1000)
+- Category diversity in question selection
 
 ## Recent Changes
+- **⚠️ CRITICAL: Migrated from jService to Open Trivia DB** - jService.io API permanently shut down (HTTP 410) in October 2025. Replaced with Open Trivia Database for continued functionality. Note: Questions are now general trivia, NOT authentic Jeopardy data. Air dates removed as Open Trivia DB doesn't provide them. (2025-10-03)
 - **Anytime Test isolation fix** - Fixed game board showing Anytime Test questions as completed by filtering answered questions by mode (2025-10-02)
 - **Anytime Test 50-question fix** - Added 20 more questions to seed data (now 50 total), fixed logic to complete all 50 questions (2025-10-02)
 - **Anytime Test isolation** - Test uses different questions from game board, doesn't affect spaced repetition, only Correct/Incorrect options (2025-10-02)
@@ -58,7 +59,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Prefers Anytime Test to require explicit start action, not auto-start on page load
 
 ## Next Steps
-1. Integrate authentic Jeopardy data source (jService.io API)
+1. Consider self-hosting jService for authentic Jeopardy data (optional)
 2. Enhance spaced repetition algorithm with performance tracking
 3. Add advanced analytics and progress visualization
-4. Implement user authentication and data persistence
+4. Consider implementing Open Trivia DB session tokens to avoid question repetition

@@ -33,7 +33,7 @@ import {
   type NotificationWithAction
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { jServiceClient } from "./jservice";
+import { openTDBClient } from "./opentdb";
 
 export interface IStorage {
   // User operations (IMPORTANT) - mandatory for Replit Auth
@@ -151,90 +151,78 @@ export class MemStorage implements IStorage {
     this.initializeAchievements();
   }
 
-  // Fetch fresh game board from jService API
+  // Fetch fresh game board from Open Trivia DB API
   async fetchFreshGameBoard(): Promise<void> {
     try {
-      console.log('🎯 Fetching fresh game board from jService API...');
+      console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
       // Clear existing categories and questions
       this.categories.clear();
       this.questions.clear();
       
-      // Fetch 6 random categories from jService
-      const jCategories = await jServiceClient.getRandomCategories(6);
-      console.log(`📂 Fetched ${jCategories.length} categories from jService`);
+      // Fetch 30 random questions from Open Trivia DB
+      const triviaQuestions = await openTDBClient.getRandomQuestions(30);
+      console.log(`📝 Fetched ${triviaQuestions.length} questions from Open Trivia DB`);
       
-      // Create our internal categories
-      const categoryMap = new Map<number, string>(); // jService ID -> our ID
+      // Group questions by category
+      const categoryQuestions = new Map<string, typeof triviaQuestions>();
+      for (const q of triviaQuestions) {
+        if (!categoryQuestions.has(q.category)) {
+          categoryQuestions.set(q.category, []);
+        }
+        categoryQuestions.get(q.category)!.push(q);
+      }
       
-      for (const jCat of jCategories) {
+      // Create categories and questions (limit to 6 categories for game board)
+      const categoryNames = Array.from(categoryQuestions.keys()).slice(0, 6);
+      const values = [200, 400, 600, 800, 1000];
+      
+      for (const categoryName of categoryNames) {
+        // Create category
         const category: Category = {
           id: randomUUID(),
-          name: jCat.title,
+          name: categoryName,
           weight: 1.0
         };
         this.categories.set(category.id, category);
-        categoryMap.set(jCat.id, category.id);
-      }
-      
-      const values = [200, 400, 600, 800, 1000];
-      
-      // Fetch questions for each category
-      for (const jCat of jCategories) {
-        const ourCategoryId = categoryMap.get(jCat.id);
-        if (!ourCategoryId) continue;
         
-        console.log(`📝 Fetching clues for category: ${jCat.title}`);
+        // Get questions for this category
+        const questions = categoryQuestions.get(categoryName)!;
         
-        try {
-          // Fetch 10 clues from jService API for this category
-          const jClues = await jServiceClient.getCluesForCategory(jCat.id, 10);
-          console.log(`   Found ${jClues.length} clues for ${jCat.title}`);
+        // Create up to 5 questions per category
+        for (let i = 0; i < Math.min(5, questions.length); i++) {
+          const tq = questions[i];
+          const converted = openTDBClient.convertQuestion(tq);
+          const assignedValue = values[i] || 600;
           
-          if (jClues.length === 0) {
-            console.warn(`   ⚠️ No valid clues found for ${jCat.title}, skipping category`);
-            continue;
-          }
+          const question: Question = {
+            id: randomUUID(),
+            categoryId: category.id,
+            text: converted.text,
+            answer: converted.answer,
+            value: assignedValue,
+            difficulty: Math.ceil(assignedValue / 200),
+            airDate: null,
+            jServiceId: null
+          };
           
-          // Convert clues to our format
-          const convertedClues = jClues.map(jClue => jServiceClient.convertClue(jClue));
+          this.questions.set(question.id, question);
           
-          // Assign 5 questions to each dollar value (200, 400, 600, 800, 1000)
-          for (let i = 0; i < 5 && i < convertedClues.length; i++) {
-            const clue = convertedClues[i];
-            const assignedValue = values[i];
-            
-            const question: Question = {
-              id: randomUUID(),
-              categoryId: ourCategoryId,
-              text: clue.text,
-              answer: clue.answer,
-              value: assignedValue,
-              difficulty: Math.ceil(assignedValue / 200),
-              airDate: clue.airDate,
-              jServiceId: clue.jServiceId
-            };
-            
-            this.questions.set(question.id, question);
-            
-            // Initialize spaced repetition data for each question (system-level initialization)
-            const srData: SpacedRepetition = {
-              id: randomUUID(),
-              userId: "system",
-              questionId: question.id,
-              easeFactor: 2.5,
-              interval: 1,
-              repetitions: 0,
-              nextReview: new Date(),
-              lastReviewed: null,
-            };
-            this.spacedRepetition.set(srData.id, srData);
-          }
-          
-          console.log(`   ✅ Added 5 questions for ${jCat.title}`);
-        } catch (error) {
-          console.error(`   ❌ Failed to fetch clues for ${jCat.title}:`, error);
+          // Initialize spaced repetition data for each question
+          const srData: SpacedRepetition = {
+            id: randomUUID(),
+            userId: "system",
+            questionId: question.id,
+            easeFactor: 2.5,
+            interval: 1,
+            repetitions: 0,
+            nextReview: new Date(),
+            lastReviewed: null,
+          };
+          this.spacedRepetition.set(srData.id, srData);
         }
+        
+        console.log(`   ✅ Added ${Math.min(5, questions.length)} questions for ${categoryName}`);
       }
       
       const totalQuestions = this.questions.size;
@@ -859,23 +847,22 @@ export class MemStorage implements IStorage {
 
   async getAnytimeTestSet(userId?: string): Promise<QuestionWithCategory[]> {
     try {
-      console.log('🎯 Fetching 50 fresh questions from jService for Anytime Test...');
+      console.log('🎯 Fetching 50 fresh questions from Open Trivia DB for Anytime Test...');
       
-      // Fetch 50+ random clues from jService API (fetch extra to ensure we get 50 after filtering)
-      const jClues = await jServiceClient.getRandomClues(60);
-      console.log(`📝 Fetched ${jClues.length} clues from jService`);
+      // Fetch 50 random questions from Open Trivia DB
+      const triviaQuestions = await openTDBClient.getRandomQuestions(50);
+      console.log(`📝 Fetched ${triviaQuestions.length} questions from Open Trivia DB`);
       
       const questions: QuestionWithCategory[] = [];
       
-      // Convert each clue to our format
-      for (let i = 0; i < jClues.length && questions.length < 50; i++) {
-        const jClue = jClues[i];
-        const converted = jServiceClient.convertClue(jClue);
+      // Convert each question to our format
+      for (const tq of triviaQuestions) {
+        const converted = openTDBClient.convertQuestion(tq);
         
         // Create a temporary category for this question
         const category: Category = {
           id: randomUUID(),
-          name: jClue.category.title,
+          name: tq.category,
           weight: 1.0
         };
         
@@ -886,8 +873,8 @@ export class MemStorage implements IStorage {
           answer: converted.answer,
           value: converted.value,
           difficulty: converted.difficulty,
-          airDate: converted.airDate,
-          jServiceId: converted.jServiceId,
+          airDate: null,
+          jServiceId: null,
           category
         };
         
