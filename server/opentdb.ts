@@ -67,7 +67,8 @@ export class OpenTDBClient {
     return this.fetchWithRetry(async () => {
       // Open Trivia DB limits to 50 questions per call
       const actualCount = Math.min(count, 50);
-      const response = await fetch(`${this.baseUrl}?amount=${actualCount}`);
+      // Only get multiple choice questions (exclude true/false)
+      const response = await fetch(`${this.baseUrl}?amount=${actualCount}&type=multiple`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const data: OpenTDBResponse = await response.json();
@@ -76,14 +77,19 @@ export class OpenTDBClient {
         throw new Error(`API Error: Code ${data.response_code}`);
       }
       
-      return data.results;
+      // Filter out questions with problematic phrasing for Jeopardy format
+      const filtered = data.results.filter(q => this.isJeopardySuitable(q.question));
+      
+      return filtered;
     });
   }
 
   async getQuestionsByCategory(categoryId: number, count: number = 10): Promise<OpenTDBQuestion[]> {
     return this.fetchWithRetry(async () => {
-      const actualCount = Math.min(count, 50);
-      const response = await fetch(`${this.baseUrl}?amount=${actualCount}&category=${categoryId}`);
+      // Request more questions since we'll filter some out
+      const actualCount = Math.min(count * 2, 50);
+      // Only get multiple choice questions (exclude true/false)
+      const response = await fetch(`${this.baseUrl}?amount=${actualCount}&category=${categoryId}&type=multiple`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       
       const data: OpenTDBResponse = await response.json();
@@ -92,8 +98,28 @@ export class OpenTDBClient {
         throw new Error(`API Error: Code ${data.response_code}`);
       }
       
-      return data.results;
+      // Filter out questions with problematic phrasing for Jeopardy format
+      const filtered = data.results.filter(q => this.isJeopardySuitable(q.question));
+      
+      // Return requested count
+      return filtered.slice(0, count);
     });
+  }
+
+  // Check if question is suitable for Jeopardy format (doesn't require seeing multiple choice options)
+  private isJeopardySuitable(question: string): boolean {
+    const problematicPhrases = [
+      'which of the following',
+      'which one of the following',
+      'all of the following except',
+      'which of these',
+      'select all that apply',
+      'which statement is',
+      'which answer',
+    ];
+    
+    const lowerQuestion = question.toLowerCase();
+    return !problematicPhrases.some(phrase => lowerQuestion.includes(phrase));
   }
 
   // Convert difficulty to dollar value (Jeopardy-style)

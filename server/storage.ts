@@ -166,12 +166,12 @@ export class MemStorage implements IStorage {
         { id: 25, name: 'Art' }
       ];
       
-      // Fetch questions from each category (8 questions per category = 48 total)
+      // Fetch questions from each category (12 per category, filtered down to ~8 each = ~48 total)
       const allQuestions: any[] = [];
       for (const cat of diverseCategories) {
         try {
-          const questions = await openTDBClient.getQuestionsByCategory(cat.id, 8);
-          console.log(`   📚 Fetched ${questions.length} questions from ${cat.name}`);
+          const questions = await openTDBClient.getQuestionsByCategory(cat.id, 12);
+          console.log(`   📚 Fetched ${questions.length} Jeopardy-suitable questions from ${cat.name}`);
           allQuestions.push(...questions);
         } catch (error) {
           console.warn(`   ⚠️  Failed to fetch ${cat.name}, skipping...`);
@@ -179,6 +179,11 @@ export class MemStorage implements IStorage {
       }
       
       console.log(`📝 Total fetched: ${allQuestions.length} questions from ${diverseCategories.length} categories`);
+      
+      // Ensure we have enough questions
+      if (allQuestions.length < 30) {
+        throw new Error(`Insufficient questions after filtering: got ${allQuestions.length}, need 30`);
+      }
       
       // Sort ALL questions by difficulty: easy → medium → hard
       const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
@@ -904,11 +909,20 @@ export class MemStorage implements IStorage {
 
   async getAnytimeTestSet(userId?: string): Promise<QuestionWithCategory[]> {
     try {
-      console.log('🎯 Fetching 50 fresh questions from Open Trivia DB for Anytime Test...');
+      console.log('🎯 Fetching fresh Jeopardy-suitable questions from Open Trivia DB for Anytime Test...');
       
-      // Fetch 50 random questions from Open Trivia DB
+      // Fetch 50 random questions from Open Trivia DB (already filtered for Jeopardy suitability)
       const triviaQuestions = await openTDBClient.getRandomQuestions(50);
-      console.log(`📝 Fetched ${triviaQuestions.length} questions from Open Trivia DB`);
+      console.log(`📝 Fetched ${triviaQuestions.length} Jeopardy-suitable questions from Open Trivia DB`);
+      
+      // Ensure we have enough questions
+      if (triviaQuestions.length < 30) {
+        console.warn(`⚠️ Only got ${triviaQuestions.length} questions after filtering, attempting to fetch more...`);
+        // If we don't have enough, return what we have rather than failing
+        if (triviaQuestions.length === 0) {
+          throw new Error('No suitable questions available');
+        }
+      }
       
       const questions: QuestionWithCategory[] = [];
       
@@ -938,7 +952,7 @@ export class MemStorage implements IStorage {
         questions.push(question);
       }
       
-      console.log(`✨ Anytime Test set ready with ${questions.length} fresh questions`);
+      console.log(`✨ Anytime Test set ready with ${questions.length} Jeopardy-suitable questions`);
       return questions;
     } catch (error) {
       console.error('❌ Failed to fetch Anytime Test questions:', error);

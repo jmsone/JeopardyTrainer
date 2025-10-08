@@ -31,6 +31,8 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category diversity in question selection
 
 ## Recent Changes
+- **⚠️ KNOWN ISSUE: In-memory storage incompatible with autoscale** - Production autoscale creates multiple server instances, each with separate memory. Questions stored in one instance return 404 when accessed from another. Need to migrate to PostgreSQL database storage for production reliability. (2025-10-08)
+- **✅ Jeopardy-suitable question filtering** - Filters out true/false and "which of the following" style questions. Only uses questions that work as standalone Jeopardy clues without requiring multiple choice options. (2025-10-08)
 - **✅ Diverse category implementation** - Now fetches from 6 predefined categories (General Knowledge, History, Geography, Science & Nature, Sports, Art) instead of random questions. Guarantees category variety while maintaining difficulty progression. (2025-10-03)
 - **✅ Fixed difficulty-value correlation** - Refactored to sort ALL questions globally by difficulty before distributing across board. First 30 questions (easiest) assigned sequentially ensures $200 rows get easy questions, $1000 rows get hard questions. Guarantees proper progression. (2025-10-03)
 - **⚠️ CRITICAL: Migrated from jService to Open Trivia DB** - jService.io API permanently shut down (HTTP 410) in October 2025. Replaced with Open Trivia Database for continued functionality. Note: Questions are now general trivia, NOT authentic Jeopardy data. Air dates removed as Open Trivia DB doesn't provide them. (2025-10-03)
