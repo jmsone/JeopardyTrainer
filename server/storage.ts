@@ -1444,4 +1444,15 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DbStorage } from './db-storage';
+
+// Feature flag: use database storage for production autoscale compatibility
+// Set USE_DB_STORAGE=true to enable database-backed storage
+const USE_DB_STORAGE = process.env.USE_DB_STORAGE === 'true' || process.env.NODE_ENV === 'production';
+
+export const storage: IStorage = USE_DB_STORAGE 
+  ? new DbStorage() 
+  : new MemStorage();
+
+console.log(`💾 Using ${USE_DB_STORAGE ? 'Database' : 'In-Memory'} Storage`);
+
