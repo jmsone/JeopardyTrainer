@@ -30,7 +30,9 @@ import {
   type StreakInfo,
   type AchievementWithProgress,
   type GamificationStats,
-  type NotificationWithAction
+  type NotificationWithAction,
+  type User,
+  type UpsertUser
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { openTDBClient } from "./opentdb";

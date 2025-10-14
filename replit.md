@@ -19,7 +19,11 @@ A comprehensive trivia training application featuring Google login authenticatio
 ## Technical Architecture
 - Frontend: React with Vite, TypeScript, Tailwind CSS, shadcn/ui
 - Backend: Express.js with TypeScript
-- Database: PostgreSQL (Neon)
+- Database: PostgreSQL (Neon) with Drizzle ORM
+- Storage: Dual implementation (MemStorage for dev, DbStorage for production)
+  - Feature flag: `USE_DB_STORAGE=true` or `NODE_ENV=production` enables database storage
+  - Questions stored globally in database, shared across all users
+  - User progress, achievements, and spaced repetition data scoped per user
 - Data Sources: Open Trivia Database API (opentdb.com)
 - Algorithms: Spaced repetition (SM-2 or similar)
 
@@ -31,7 +35,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category diversity in question selection
 
 ## Recent Changes
-- **⚠️ KNOWN ISSUE: In-memory storage incompatible with autoscale** - Production autoscale creates multiple server instances, each with separate memory. Questions stored in one instance return 404 when accessed from another. Need to migrate to PostgreSQL database storage for production reliability. (2025-10-08)
+- **✅ PostgreSQL storage migration complete** - Implemented database-backed storage (DbStorage) to fix autoscale 404 errors. Feature flag automatically enables database storage in production (NODE_ENV=production) while keeping in-memory for development. Questions now persist across server instances. (2025-10-14)
 - **✅ Jeopardy-suitable question filtering** - Filters out true/false and "which of the following" style questions. Only uses questions that work as standalone Jeopardy clues without requiring multiple choice options. (2025-10-08)
 - **✅ Diverse category implementation** - Now fetches from 6 predefined categories (General Knowledge, History, Geography, Science & Nature, Sports, Art) instead of random questions. Guarantees category variety while maintaining difficulty progression. (2025-10-03)
 - **✅ Fixed difficulty-value correlation** - Refactored to sort ALL questions globally by difficulty before distributing across board. First 30 questions (easiest) assigned sequentially ensures $200 rows get easy questions, $1000 rows get hard questions. Guarantees proper progression. (2025-10-03)
