@@ -35,6 +35,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category diversity in question selection
 
 ## Recent Changes
+- **✅ CRITICAL: Fixed initialization race condition** - Added promise-based locking mechanism to prevent concurrent `fetchFreshGameBoard()` calls in both MemStorage and DbStorage. Previously, simultaneous requests to `/api/categories` and `/api/questions` on app load triggered 3+ concurrent API fetches, causing HTTP 429 rate limits and 35+ second load times. Now only one initialization occurs, reducing load time to ~5-8 seconds. (2025-10-28)
 - **✅ PostgreSQL storage migration complete** - Implemented database-backed storage (DbStorage) to fix autoscale 404 errors. Feature flag automatically enables database storage in production (NODE_ENV=production) while keeping in-memory for development. Questions now persist across server instances. (2025-10-14)
 - **✅ Jeopardy-suitable question filtering** - Filters out true/false and "which of the following" style questions. Only uses questions that work as standalone Jeopardy clues without requiring multiple choice options. (2025-10-08)
 - **✅ Diverse category implementation** - Now fetches from 6 predefined categories (General Knowledge, History, Geography, Science & Nature, Sports, Art) instead of random questions. Guarantees category variety while maintaining difficulty progression. (2025-10-03)
