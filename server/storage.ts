@@ -142,6 +142,7 @@ export class MemStorage implements IStorage {
   private userGoals: Map<string, UserGoals> = new Map();
 
   private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
     this.initializeData();
@@ -155,6 +156,28 @@ export class MemStorage implements IStorage {
 
   // Fetch fresh game board from Open Trivia DB API
   async fetchFreshGameBoard(): Promise<void> {
+    // If already initialized, return immediately
+    if (this.initialized) {
+      return;
+    }
+
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Start initialization and store the promise
+    this.initializationPromise = this._doFetchFreshGameBoard();
+    
+    try {
+      await this.initializationPromise;
+    } finally {
+      // Clear the promise after completion (success or failure)
+      this.initializationPromise = null;
+    }
+  }
+
+  private async _doFetchFreshGameBoard(): Promise<void> {
     try {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
