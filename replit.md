@@ -1,7 +1,7 @@
 # The Daily Double Down
 
 ## Project Overview
-A comprehensive trivia training application featuring Google login authentication via Replit Auth, spaced repetition learning, dynamic question data, sophisticated gamification, and comprehensive performance tracking.
+A comprehensive trivia training application featuring optional Google login authentication via Replit Auth, spaced repetition learning, dynamic question data, sophisticated gamification, and comprehensive performance tracking. Users can access the game board immediately without login, with optional authentication for progress tracking and advanced features.
 
 ## Core Features
 - Dynamic trivia questions from Open Trivia Database API
@@ -35,6 +35,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category diversity in question selection
 
 ## Recent Changes
+- **✅ Optional authentication system** - Removed login gate to allow anonymous users immediate access to game board. Created `optionalAuth` middleware and updated 20+ routes to work without authentication. Anonymous users can play questions but don't get progress tracking. Authenticated users get full features (stats, achievements, notifications, progress persistence). Header shows "Sign In" button for anonymous users, user profile dropdown for authenticated users. Testing confirmed both flows work correctly. (2025-10-29)
 - **✅ Category diversity system** - Implemented topic grouping and diversity quotas to prevent 5 Entertainment + 1 other category boards. Categories now grouped into Entertainment (10 subcategories), Science (4 subcategories), and General (10 topics). Selection enforces max 2 Entertainment, max 1 Science, ensuring 3-4 categories from diverse General topics like History, Geography, Sports, Mythology, Art, Animals, etc. Testing confirmed reduction from 5/6 Entertainment to 2/6, with broad topic coverage. (2025-10-29)
 - **✅ Enhanced Jeopardy-style question filtering** - Expanded isJeopardySuitable() to filter out ordering/listing questions that require multiple choice options: "list the following", "order the following", "arrange/sort/rank the following", "put the following in order", "the following in chronological order". Prevents questions like "List the following Iranic empires in chronological order" which are unanswerable as standalone clues. (2025-10-29)
 - **✅ CRITICAL: Fixed ES module import bug** - Replaced CommonJS `require()` calls with ES6 `import` statements in server/storage.ts mastery calculation functions. Previous code caused "ReferenceError: require is not defined" preventing category mastery from being saved. Fix validated with full e2e testing (4 questions answered, category mastery tracking confirmed, readiness calculation working). (2025-10-29)
@@ -75,6 +76,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Requests air date information for questions that may become outdated
 - Expects seamless continuation after completing sessions (reset/restart functionality)
 - Prefers Anytime Test to require explicit start action, not auto-start on page load
+- Wants immediate access to game board without forced authentication - login should be optional for progress tracking
 
 ## Next Steps
 1. Consider self-hosting jService for authentic Jeopardy data (optional)
