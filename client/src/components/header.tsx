@@ -149,10 +149,10 @@ export default function Header() {
 
             {/* User Profile & Notification Center */}
             <div className="flex items-center gap-3">
-              <NotificationCenter />
+              {user && <NotificationCenter />}
               
-              {/* User Profile Dropdown */}
-              {user && (
+              {/* User Profile Dropdown or Sign In Button */}
+              {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger className="flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg px-2 py-1 transition-colors" data-testid="dropdown-user-profile">
                     <Avatar className="w-8 h-8">
@@ -187,6 +187,15 @@ export default function Header() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              ) : (
+                <button
+                  onClick={() => window.location.href = "/api/login"}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                  data-testid="button-login"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </button>
               )}
             </div>
           </div>

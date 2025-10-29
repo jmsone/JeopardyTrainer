@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema, insertTestAttemptSchema, insertUserGoalsSchema } from "@shared/schema";
 import { z } from "zod";
 import { perplexityService } from "./perplexity-service";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, optionalAuth } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware - set up first
@@ -64,8 +64,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get answered questions (only for game mode by default, to keep Anytime Test isolated)
-  app.get("/api/answered-questions", isAuthenticated, async (req: any, res) => {
+  app.get("/api/answered-questions", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const answeredQuestions = await storage.getAnsweredQuestions(userId, "game");
       res.json(answeredQuestions);
@@ -75,8 +78,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset game board with new questions
-  app.post("/api/reset-board", isAuthenticated, async (req: any, res) => {
+  app.post("/api/reset-board", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ message: "Game board reset successfully" });
+      }
       const userId = req.user.claims.sub;
       await storage.resetGameBoard(userId);
       res.json({ message: "Game board reset successfully" });
@@ -86,8 +92,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Clear all progress
-  app.post("/api/clear-progress", isAuthenticated, async (req: any, res) => {
+  app.post("/api/clear-progress", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ message: "Progress cleared successfully" });
+      }
       const userId = req.user.claims.sub;
       await storage.clearProgress(userId);
       res.json({ message: "Progress cleared successfully" });
@@ -120,8 +129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User progress
-  app.post("/api/progress", isAuthenticated, async (req: any, res) => {
+  app.post("/api/progress", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ message: "Progress not saved (anonymous user)" });
+      }
       const userId = req.user.claims.sub;
       console.log("🎯 POST /api/progress called with:", req.body, "for user:", userId);
       const validatedData = insertUserProgressSchema.parse({
@@ -206,8 +218,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Statistics
-  app.get("/api/stats/categories", isAuthenticated, async (req: any, res) => {
+  app.get("/api/stats/categories", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const stats = await storage.getCategoryStats(userId);
       res.json(stats);
@@ -216,8 +231,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/stats/daily", isAuthenticated, async (req: any, res) => {
+  app.get("/api/stats/daily", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const days = parseInt(req.query.days as string) || 7;
       const stats = await storage.getDailyStats(days, userId);
@@ -227,8 +245,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/stats/overall", isAuthenticated, async (req: any, res) => {
+  app.get("/api/stats/overall", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ totalQuestions: 0, overallAccuracy: 0, currentStreak: 0, totalStudyTime: 0 });
+      }
       const userId = req.user.claims.sub;
       const stats = await storage.getOverallStats(userId);
       res.json(stats);
@@ -355,8 +376,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Category Mastery
-  app.get("/api/category-mastery", isAuthenticated, async (req: any, res) => {
+  app.get("/api/category-mastery", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const masteryRecords = await storage.getCategoryMasteryRecords(userId);
       res.json(masteryRecords);
@@ -394,8 +418,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Anytime Test Questions
-  app.get("/api/anytime-test-questions", isAuthenticated, async (req: any, res) => {
+  app.get("/api/anytime-test-questions", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const questions = await storage.getAnytimeTestSet(userId);
       res.json(questions);
@@ -418,8 +445,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/achievements/progress", isAuthenticated, async (req: any, res) => {
+  app.get("/api/achievements/progress", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const achievementsWithProgress = await storage.getAchievementsWithProgress(userId);
       res.json(achievementsWithProgress);
@@ -429,8 +459,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/user-achievements", isAuthenticated, async (req: any, res) => {
+  app.get("/api/user-achievements", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const userAchievements = await storage.getUserAchievements(userId);
       res.json(userAchievements);
@@ -441,8 +474,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notifications
-  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+  app.get("/api/notifications", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json([]);
+      }
       const userId = req.user.claims.sub;
       const { unread } = req.query;
       const notifications = await storage.getNotifications(unread === 'true', userId);
@@ -453,8 +489,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/notifications/:id/read", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/notifications/:id/read", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ message: "Cannot mark notification as read (anonymous user)" });
+      }
       const userId = req.user.claims.sub;
       const { id } = req.params;
       await storage.markNotificationRead(id, userId);
@@ -465,8 +504,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/notifications/unread-count", isAuthenticated, async (req: any, res) => {
+  app.get("/api/notifications/unread-count", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ count: 0 });
+      }
       const userId = req.user.claims.sub;
       const count = await storage.getUnreadNotificationCount(userId);
       res.json({ count });
@@ -477,8 +519,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Goals
-  app.get("/api/goals", isAuthenticated, async (req: any, res) => {
+  app.get("/api/goals", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json(null);
+      }
       const userId = req.user.claims.sub;
       const goals = await storage.getUserGoals(userId);
       res.json(goals);
@@ -488,8 +533,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/goals", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/goals", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({ message: "Cannot update goals (anonymous user)" });
+      }
       const userId = req.user.claims.sub;
       const validatedData = insertUserGoalsSchema.partial().parse(req.body);
       const updatedGoals = await storage.updateUserGoals(validatedData, userId);
@@ -505,8 +553,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Streaks and Stats
-  app.get("/api/streaks", isAuthenticated, async (req: any, res) => {
+  app.get("/api/streaks", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json(null);
+      }
       const userId = req.user.claims.sub;
       const streakInfo = await storage.getStreakInfo(userId);
       res.json(streakInfo);
@@ -516,8 +567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/gamification-stats", isAuthenticated, async (req: any, res) => {
+  app.get("/api/gamification-stats", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json(null);
+      }
       const userId = req.user.claims.sub;
       const stats = await storage.getGamificationStats(userId);
       res.json(stats);
@@ -528,8 +582,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // COST OPTIMIZATION: Consolidated gamification data endpoint
-  app.get("/api/gamification/dashboard", isAuthenticated, async (req: any, res) => {
+  app.get("/api/gamification/dashboard", optionalAuth, async (req: any, res) => {
     try {
+      if (!req.user || !req.user.claims) {
+        return res.json({
+          stats: null,
+          achievements: [],
+          unreadNotificationCount: { count: 0 },
+          userGoals: null
+        });
+      }
       const userId = req.user.claims.sub;
       const [
         stats,

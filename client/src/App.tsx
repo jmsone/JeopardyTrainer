@@ -12,19 +12,12 @@ import Landing from "@/pages/landing";
 import Progress from "@/pages/progress";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
-
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/study" component={Study} />
-          <Route path="/progress" component={Progress} />
-        </>
-      )}
+      <Route path="/" component={Home} />
+      <Route path="/study" component={Study} />
+      <Route path="/progress" component={Progress} />
+      <Route path="/welcome" component={Landing} />
       <Route component={NotFound} />
     </Switch>
   );
