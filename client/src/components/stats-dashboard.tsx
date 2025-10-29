@@ -72,12 +72,12 @@ export default function StatsDashboard() {
         <div className="space-y-4">
           {readinessData?.components.map((component, index) => {
             const getIcon = (name: string) => {
-              if (name.toLowerCase().includes('anytime') || name.toLowerCase().includes('test')) {
-                return <Trophy className="mr-2 text-yellow-500" size={16} />;
-              } else if (name.toLowerCase().includes('game') || name.toLowerCase().includes('practice')) {
+              if (name.toLowerCase().includes('mastery')) {
+                return <Trophy className="mr-2 text-purple-500" size={16} />;
+              } else if (name.toLowerCase().includes('breadth')) {
                 return <Target className="mr-2 text-blue-500" size={16} />;
-              } else if (name.toLowerCase().includes('spaced') || name.toLowerCase().includes('repetition')) {
-                return <Clock className="mr-2 text-green-500" size={16} />;
+              } else if (name.toLowerCase().includes('anytime') || name.toLowerCase().includes('test')) {
+                return <Brain className="mr-2 text-yellow-500" size={16} />;
               }
               return <Brain className="mr-2 text-gray-500" size={16} />;
             };
@@ -110,7 +110,7 @@ export default function StatsDashboard() {
           Category Coverage for Test Readiness
         </h3>
         <div className="text-sm text-muted-foreground mb-4">
-          Minimum 6 categories needed for full readiness. Coverage affects your final score.
+          Minimum {readinessData?.categoryBreadth.requiredCategories || 12} categories needed for full breadth score. Practicing diverse categories improves your overall readiness.
         </div>
         <div className="space-y-3">
           {categoryStats?.map((category) => {
@@ -206,14 +206,14 @@ export default function StatsDashboard() {
                 </div>
               )}
               
-              {/* Check for low Game Mode component */}
-              {readinessData && readinessData.components.find(c => c.name.toLowerCase().includes('game') || c.name.toLowerCase().includes('practice'))?.score < 50 && (
-                <div className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <Target className="text-blue-500 mt-0.5" size={16} />
+              {/* Check for low Category Mastery component */}
+              {readinessData && readinessData.components.find(c => c.name.toLowerCase().includes('mastery'))?.score < 50 && (
+                <div className="flex items-start space-x-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <Trophy className="text-purple-500 mt-0.5" size={16} />
                   <div>
-                    <div className="text-sm font-medium">Increase Regular Practice</div>
+                    <div className="text-sm font-medium">Improve Category Mastery</div>
                     <div className="text-xs text-muted-foreground">
-                      More game board and rapid-fire sessions will improve your foundation
+                      Answer more questions correctly in each category to build long-term mastery
                     </div>
                   </div>
                 </div>
