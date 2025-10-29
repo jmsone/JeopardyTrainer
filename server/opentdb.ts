@@ -116,6 +116,13 @@ export class OpenTDBClient {
       'select all that apply',
       'which statement is',
       'which answer',
+      'list the following',
+      'order the following',
+      'arrange the following',
+      'sort the following',
+      'rank the following',
+      'put the following in order',
+      'the following in chronological order',
     ];
     
     const lowerQuestion = question.toLowerCase();
