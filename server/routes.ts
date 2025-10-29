@@ -131,6 +131,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const progress = await storage.createUserProgress(validatedData);
       console.log("📊 Progress saved:", progress);
       
+      // Update category mastery tracking
+      try {
+        const question = await storage.getQuestion(validatedData.questionId);
+        if (question) {
+          const categories = await storage.getCategories();
+          const category = categories.find(c => c.id === question.categoryId);
+          if (category) {
+            await storage.updateCategoryMastery(
+              userId,
+              category.name,
+              validatedData.correct,
+              new Date()
+            );
+            console.log("📈 Category mastery updated for:", category.name);
+          }
+        }
+      } catch (masteryError) {
+        console.error("❌ Category mastery update failed:", masteryError);
+        // Don't fail the entire request if mastery tracking fails
+      }
+      
       // Update spaced repetition data ONLY for game mode (not anytime_test or rapid_fire)
       // This keeps Anytime Test isolated from affecting game board questions
       if (validatedData.mode === 'game') {
@@ -330,6 +351,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to get readiness score:", error);
       res.status(500).json({ message: "Failed to calculate readiness score" });
+    }
+  });
+
+  // Category Mastery
+  app.get("/api/category-mastery", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const masteryRecords = await storage.getCategoryMasteryRecords(userId);
+      res.json(masteryRecords);
+    } catch (error) {
+      console.error("Failed to get category mastery:", error);
+      res.status(500).json({ message: "Failed to fetch category mastery data" });
     }
   });
 

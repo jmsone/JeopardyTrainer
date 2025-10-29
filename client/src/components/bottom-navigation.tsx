@@ -13,12 +13,12 @@ export default function BottomNavigation({ currentScreen, onScreenChange }: Bott
   const navItems = [
     { id: "game", icon: Home, label: "Game", path: "/" },
     { id: "study", icon: Brain, label: "Study", path: "/study" },
-    { id: "stats", icon: BarChart3, label: "Stats", path: "/" },
+    { id: "stats", icon: BarChart3, label: "Stats", path: "/progress" },
     { id: "achievements", icon: Trophy, label: "Achievements", path: "/" },
   ];
 
   const handleNavClick = (item: typeof navItems[0]) => {
-    if (item.id === "study") {
+    if (item.id === "study" || item.id === "stats") {
       setLocation(item.path);
     } else {
       onScreenChange(item.id);

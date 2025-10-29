@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Study from "@/pages/study";
 import Landing from "@/pages/landing";
+import Progress from "@/pages/progress";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -21,6 +22,7 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/study" component={Study} />
+          <Route path="/progress" component={Progress} />
         </>
       )}
       <Route component={NotFound} />
