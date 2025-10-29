@@ -78,48 +78,38 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    try {
-      console.log("🔐 Verify callback starting...");
-      const claims = tokens.claims();
-      console.log("📋 Token claims received:", { sub: claims?.sub, email: claims?.email });
-      
-      const user = {};
-      updateUserSession(user, tokens);
-      console.log("✅ User session updated");
-      
-      await upsertUser(claims);
-      console.log("✅ User upserted to database");
-      
-      verified(null, user);
-      console.log("✅ Verify callback completed successfully");
-    } catch (error) {
-      console.error("❌ Authentication verify callback failed:", {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-        error
-      });
-      verified(error as Error);
-    }
+    const user = {};
+    updateUserSession(user, tokens);
+    await upsertUser(tokens.claims());
+    verified(null, user);
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
-    const strategy = new Strategy(
-      {
-        name: `replitauth:${domain}`,
-        config,
-        scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
-      },
-      verify,
-    );
-    passport.use(strategy);
-  }
+  // Keep track of registered strategies
+  const registeredStrategies = new Set<string>();
+
+  // Helper function to ensure strategy exists for a domain
+  const ensureStrategy = (domain: string) => {
+    const strategyName = `replitauth:${domain}`;
+    if (!registeredStrategies.has(strategyName)) {
+      const strategy = new Strategy(
+        {
+          name: strategyName,
+          config,
+          scope: "openid email profile offline_access",
+          callbackURL: `https://${domain}/api/callback`,
+        },
+        verify,
+      );
+      passport.use(strategy);
+      registeredStrategies.add(strategyName);
+    }
+  };
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -127,41 +117,10 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    console.log("📥 OAuth callback received:", {
-      query: req.query,
-      hostname: req.hostname,
-      protocol: req.protocol,
-      originalUrl: req.originalUrl
-    });
-    
+    ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
-    }, (err: any, user: any, info: any) => {
-      if (err) {
-        console.error("❌ OAuth callback authentication error:", {
-          message: err.message,
-          stack: err.stack,
-          error: err
-        });
-        return res.status(500).json({ 
-          message: "Authentication failed", 
-          error: err.message,
-          details: err.error_description || err.error || "Unknown error"
-        });
-      }
-      if (!user) {
-        console.warn("⚠️  OAuth callback: no user returned, info:", info);
-        return res.redirect("/api/login");
-      }
-      req.logIn(user, (loginErr) => {
-        if (loginErr) {
-          console.error("❌ OAuth callback login error:", loginErr);
-          return res.status(500).json({ message: "Login failed", error: loginErr.message });
-        }
-        console.log("✅ OAuth callback successful, redirecting to /");
-        return res.redirect("/");
-      });
     })(req, res, next);
   });
 
