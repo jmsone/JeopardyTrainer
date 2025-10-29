@@ -38,6 +38,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { openTDBClient } from "./opentdb";
+import { calculateTimeDecayWeight, calculateWeightedCorrectScore, determineMasteryLevel, calculateCategoryMasteryScore, calculateBreadthScore, calculateOverallReadiness } from "./utils/mastery-calculations";
 
 export interface IStorage {
   // User operations (IMPORTANT) - mandatory for Replit Auth
@@ -1044,9 +1045,6 @@ export class MemStorage implements IStorage {
     isCorrect: boolean,
     answeredAt: Date
   ): Promise<CategoryMastery> {
-    // Import mastery calculation functions
-    const { calculateTimeDecayWeight, calculateWeightedCorrectScore, determineMasteryLevel } = require('./utils/mastery-calculations');
-    
     // Find existing record or create new one
     const recordKey = `${userId}:${categoryName}`;
     let record = Array.from(this.categoryMastery.values()).find(
@@ -1099,8 +1097,6 @@ export class MemStorage implements IStorage {
   }
 
   async getReadinessScore(): Promise<ReadinessScore> {
-    const { calculateCategoryMasteryScore, calculateBreadthScore, calculateOverallReadiness } = require('./utils/mastery-calculations');
-    
     const now = new Date();
     const allProgress = await this.getUserProgress();
     const testAttempts = await this.getTestAttempts("anytime_test");
