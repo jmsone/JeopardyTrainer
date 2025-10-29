@@ -189,45 +189,69 @@ export class MemStorage implements IStorage {
     try {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
-      // Define all 24 Open Trivia DB categories
-      const allCategories = [
-        { id: 9, name: 'General Knowledge' },
-        { id: 10, name: 'Entertainment: Books' },
-        { id: 11, name: 'Entertainment: Film' },
-        { id: 12, name: 'Entertainment: Music' },
-        { id: 13, name: 'Entertainment: Musicals & Theatres' },
-        { id: 14, name: 'Entertainment: Television' },
-        { id: 15, name: 'Entertainment: Video Games' },
-        { id: 16, name: 'Entertainment: Board Games' },
-        { id: 17, name: 'Science & Nature' },
-        { id: 18, name: 'Science: Computers' },
-        { id: 19, name: 'Science: Mathematics' },
-        { id: 20, name: 'Mythology' },
-        { id: 21, name: 'Sports' },
-        { id: 22, name: 'Geography' },
-        { id: 23, name: 'History' },
-        { id: 24, name: 'Politics' },
-        { id: 25, name: 'Art' },
-        { id: 26, name: 'Celebrities' },
-        { id: 27, name: 'Animals' },
-        { id: 28, name: 'Vehicles' },
-        { id: 29, name: 'Entertainment: Comics' },
-        { id: 30, name: 'Science: Gadgets' },
-        { id: 31, name: 'Entertainment: Japanese Anime & Manga' },
-        { id: 32, name: 'Entertainment: Cartoon & Animations' }
+      // Define all 24 Open Trivia DB categories grouped by topic
+      const categoryGroups = {
+        entertainment: [
+          { id: 10, name: 'Entertainment: Books' },
+          { id: 11, name: 'Entertainment: Film' },
+          { id: 12, name: 'Entertainment: Music' },
+          { id: 13, name: 'Entertainment: Musicals & Theatres' },
+          { id: 14, name: 'Entertainment: Television' },
+          { id: 15, name: 'Entertainment: Video Games' },
+          { id: 16, name: 'Entertainment: Board Games' },
+          { id: 29, name: 'Entertainment: Comics' },
+          { id: 31, name: 'Entertainment: Japanese Anime & Manga' },
+          { id: 32, name: 'Entertainment: Cartoon & Animations' }
+        ],
+        science: [
+          { id: 17, name: 'Science & Nature' },
+          { id: 18, name: 'Science: Computers' },
+          { id: 19, name: 'Science: Mathematics' },
+          { id: 30, name: 'Science: Gadgets' }
+        ],
+        general: [
+          { id: 9, name: 'General Knowledge' },
+          { id: 20, name: 'Mythology' },
+          { id: 21, name: 'Sports' },
+          { id: 22, name: 'Geography' },
+          { id: 23, name: 'History' },
+          { id: 24, name: 'Politics' },
+          { id: 25, name: 'Art' },
+          { id: 26, name: 'Celebrities' },
+          { id: 27, name: 'Animals' },
+          { id: 28, name: 'Vehicles' }
+        ]
+      };
+      
+      // Shuffle each group independently
+      const shuffleArray = <T,>(arr: T[]): T[] => {
+        const shuffled = [...arr];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      };
+      
+      const shuffledEntertainment = shuffleArray(categoryGroups.entertainment);
+      const shuffledScience = shuffleArray(categoryGroups.science);
+      const shuffledGeneral = shuffleArray(categoryGroups.general);
+      
+      // Create a diverse selection pool: max 2 from Entertainment, max 1 from Science, rest from General
+      // This ensures broad topic coverage
+      const diversePool = [
+        ...shuffledEntertainment.slice(0, 2),  // Max 2 Entertainment
+        ...shuffledScience.slice(0, 1),        // Max 1 Science
+        ...shuffledGeneral                      // All General topics
       ];
       
-      // Fisher-Yates shuffle for unbiased randomization
-      const shuffled = [...allCategories];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
+      // Shuffle the final pool
+      const shuffled = shuffleArray(diversePool);
       
       // Fetch and select questions for each category with retry logic
       const selectedByCategory: Array<{ categoryName: string; questions: any[] }> = [];
       const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
-      const maxAttempts = 18; // Try up to 18 categories to get 6 successful ones
+      const maxAttempts = 20; // Try up to 20 categories to get 6 successful ones
       let attemptedCount = 0;
       
       for (const cat of shuffled) {
