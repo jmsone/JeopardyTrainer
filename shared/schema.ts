@@ -150,6 +150,18 @@ export const userGoals = pgTable("user_goals", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const categoryMastery = pgTable("category_mastery", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  categoryName: text("category_name").notNull(), // Name of the category (e.g., "Geography", "History")
+  totalCorrect: integer("total_correct").notNull().default(0), // All-time correct answers in this category
+  totalAnswered: integer("total_answered").notNull().default(0), // All-time questions answered in this category
+  weightedCorrectScore: real("weighted_correct_score").notNull().default(0), // Time-decayed correct answer score (0-100)
+  lastAnswered: timestamp("last_answered"), // When user last answered a question in this category
+  masteryLevel: varchar("mastery_level", { enum: ["novice", "intermediate", "advanced", "expert", "master"] }).notNull().default("novice"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const insertCategorySchema = createInsertSchema(categories).omit({
   id: true,
 });
@@ -211,6 +223,11 @@ export const insertUserGoalsSchema = createInsertSchema(userGoals).omit({
   updatedAt: true,
 });
 
+export const insertCategoryMasterySchema = createInsertSchema(categoryMastery).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types required for Replit Auth
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -225,6 +242,7 @@ export type Achievement = typeof achievements.$inferSelect;
 export type UserAchievement = typeof userAchievements.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type UserGoals = typeof userGoals.$inferSelect;
+export type CategoryMastery = typeof categoryMastery.$inferSelect;
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
@@ -238,6 +256,7 @@ export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertUserGoals = z.infer<typeof insertUserGoalsSchema>;
+export type InsertCategoryMastery = z.infer<typeof insertCategoryMasterySchema>;
 
 // Extended types for API responses
 export type QuestionWithCategory = Question & {
