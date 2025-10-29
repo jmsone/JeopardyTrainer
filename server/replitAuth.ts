@@ -79,12 +79,25 @@ export async function setupAuth(app: Express) {
     verified: passport.AuthenticateCallback
   ) => {
     try {
+      console.log("🔐 Verify callback starting...");
+      const claims = tokens.claims();
+      console.log("📋 Token claims received:", { sub: claims?.sub, email: claims?.email });
+      
       const user = {};
       updateUserSession(user, tokens);
-      await upsertUser(tokens.claims());
+      console.log("✅ User session updated");
+      
+      await upsertUser(claims);
+      console.log("✅ User upserted to database");
+      
       verified(null, user);
+      console.log("✅ Verify callback completed successfully");
     } catch (error) {
-      console.error("❌ Authentication verify callback failed:", error);
+      console.error("❌ Authentication verify callback failed:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        error
+      });
       verified(error as Error);
     }
   };
@@ -114,13 +127,28 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log("📥 OAuth callback received:", {
+      query: req.query,
+      hostname: req.hostname,
+      protocol: req.protocol,
+      originalUrl: req.originalUrl
+    });
+    
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     }, (err: any, user: any, info: any) => {
       if (err) {
-        console.error("❌ OAuth callback authentication error:", err);
-        return res.status(500).json({ message: "Authentication failed", error: err.message });
+        console.error("❌ OAuth callback authentication error:", {
+          message: err.message,
+          stack: err.stack,
+          error: err
+        });
+        return res.status(500).json({ 
+          message: "Authentication failed", 
+          error: err.message,
+          details: err.error_description || err.error || "Unknown error"
+        });
       }
       if (!user) {
         console.warn("⚠️  OAuth callback: no user returned, info:", info);
