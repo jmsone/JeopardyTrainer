@@ -378,28 +378,59 @@ export class DbStorage implements IStorage {
     try {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
-      // Define diverse category mix using Open Trivia DB category IDs
-      const boardCategories = [
+      // Define all 24 Open Trivia DB categories
+      const allCategories = [
         { id: 9, name: 'General Knowledge' },
-        { id: 23, name: 'History' },
-        { id: 22, name: 'Geography' },
+        { id: 10, name: 'Entertainment: Books' },
+        { id: 11, name: 'Entertainment: Film' },
+        { id: 12, name: 'Entertainment: Music' },
+        { id: 13, name: 'Entertainment: Musicals & Theatres' },
+        { id: 14, name: 'Entertainment: Television' },
+        { id: 15, name: 'Entertainment: Video Games' },
+        { id: 16, name: 'Entertainment: Board Games' },
         { id: 17, name: 'Science & Nature' },
+        { id: 18, name: 'Science: Computers' },
+        { id: 19, name: 'Science: Mathematics' },
+        { id: 20, name: 'Mythology' },
         { id: 21, name: 'Sports' },
-        { id: 25, name: 'Art' }
+        { id: 22, name: 'Geography' },
+        { id: 23, name: 'History' },
+        { id: 24, name: 'Politics' },
+        { id: 25, name: 'Art' },
+        { id: 26, name: 'Celebrities' },
+        { id: 27, name: 'Animals' },
+        { id: 28, name: 'Vehicles' },
+        { id: 29, name: 'Entertainment: Comics' },
+        { id: 30, name: 'Science: Gadgets' },
+        { id: 31, name: 'Entertainment: Japanese Anime & Manga' },
+        { id: 32, name: 'Entertainment: Cartoon & Animations' }
       ];
       
-      // Fetch and select questions for each category independently
+      // Fisher-Yates shuffle for unbiased randomization
+      const shuffled = [...allCategories];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      
+      // Fetch and select questions for each category with retry logic
       const selectedByCategory: Array<{ categoryName: string; questions: any[] }> = [];
       const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
+      const maxAttempts = 18; // Try up to 18 categories to get 6 successful ones
+      let attemptedCount = 0;
       
-      for (const cat of boardCategories) {
+      for (const cat of shuffled) {
+        if (selectedByCategory.length >= 6) break; // Got enough categories
+        if (attemptedCount >= maxAttempts) break; // Prevent infinite loop
+        attemptedCount++;
+        
         try {
           // Fetch 12 questions from this category
           const questions = await openTDBClient.getQuestionsByCategory(cat.id, 12);
           console.log(`   📚 Fetched ${questions.length} Jeopardy-suitable questions from ${cat.name}`);
           
           if (questions.length < 5) {
-            console.warn(`   ⚠️  Not enough questions for ${cat.name}, skipping...`);
+            console.warn(`   ⚠️  Not enough questions for ${cat.name}, trying next category...`);
             continue;
           }
           
@@ -426,14 +457,16 @@ export class DbStorage implements IStorage {
           console.log(`   ✅ Selected 5 questions for ${cat.name}: ${selected.filter(q => q.difficulty === 'easy').length} easy, ${selected.filter(q => q.difficulty === 'medium').length} medium, ${selected.filter(q => q.difficulty === 'hard').length} hard`);
           
         } catch (error) {
-          console.warn(`   ⚠️  Failed to fetch ${cat.name}, skipping...`);
+          console.warn(`   ⚠️  Failed to fetch ${cat.name}, trying next category...`);
         }
       }
       
       // Ensure we have enough categories
       if (selectedByCategory.length < 6) {
-        throw new Error(`Insufficient categories: got ${selectedByCategory.length}, need 6`);
+        throw new Error(`Insufficient categories: got ${selectedByCategory.length}, need 6. Tried ${attemptedCount} categories.`);
       }
+      
+      console.log(`🎲 Final board categories: ${selectedByCategory.map(c => c.categoryName).join(', ')}`);
       
       console.log(`📝 Successfully prepared ${selectedByCategory.length} categories with proper difficulty distribution`);
       
