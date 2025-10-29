@@ -27,7 +27,7 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    createTableIfMissing: true, // Auto-create sessions table if missing
     ttl: sessionTtl,
     tableName: "sessions",
   });
@@ -78,10 +78,15 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = {};
+      updateUserSession(user, tokens);
+      await upsertUser(tokens.claims());
+      verified(null, user);
+    } catch (error) {
+      console.error("❌ Authentication verify callback failed:", error);
+      verified(error as Error);
+    }
   };
 
   for (const domain of process.env
@@ -112,6 +117,23 @@ export async function setupAuth(app: Express) {
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
+    }, (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("❌ OAuth callback authentication error:", err);
+        return res.status(500).json({ message: "Authentication failed", error: err.message });
+      }
+      if (!user) {
+        console.warn("⚠️  OAuth callback: no user returned, info:", info);
+        return res.redirect("/api/login");
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error("❌ OAuth callback login error:", loginErr);
+          return res.status(500).json({ message: "Login failed", error: loginErr.message });
+        }
+        console.log("✅ OAuth callback successful, redirecting to /");
+        return res.redirect("/");
+      });
     })(req, res, next);
   });
 
