@@ -379,7 +379,7 @@ export class DbStorage implements IStorage {
       console.log('🎯 Fetching fresh game board from Open Trivia DB...');
       
       // Define diverse category mix using Open Trivia DB category IDs
-      const diverseCategories = [
+      const boardCategories = [
         { id: 9, name: 'General Knowledge' },
         { id: 23, name: 'History' },
         { id: 22, name: 'Geography' },
@@ -388,49 +388,54 @@ export class DbStorage implements IStorage {
         { id: 25, name: 'Art' }
       ];
       
-      // Fetch questions from each category (12 per category, filtered down to ~8 each = ~48 total)
-      const allQuestions: any[] = [];
-      for (const cat of diverseCategories) {
+      // Fetch and select questions for each category independently
+      const selectedByCategory: Array<{ categoryName: string; questions: any[] }> = [];
+      const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
+      
+      for (const cat of boardCategories) {
         try {
+          // Fetch 12 questions from this category
           const questions = await openTDBClient.getQuestionsByCategory(cat.id, 12);
           console.log(`   📚 Fetched ${questions.length} Jeopardy-suitable questions from ${cat.name}`);
-          allQuestions.push(...questions);
+          
+          if (questions.length < 5) {
+            console.warn(`   ⚠️  Not enough questions for ${cat.name}, skipping...`);
+            continue;
+          }
+          
+          // Sort WITHIN this category by difficulty: easy → medium → hard
+          const sortedQuestions = [...questions].sort((a, b) => {
+            const orderA = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2;
+            const orderB = difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2;
+            return orderA - orderB;
+          });
+          
+          // Select 5 questions spanning difficulty range:
+          // - Positions 0-1: Easy questions → $200, $400
+          // - Position 2: Medium question → $600
+          // - Positions 3-4: Harder questions → $800, $1000
+          const selected = [
+            sortedQuestions[0],  // Easiest → $200
+            sortedQuestions[1],  // Easy → $400
+            sortedQuestions[Math.floor(sortedQuestions.length / 2)],  // Middle → $600
+            sortedQuestions[sortedQuestions.length - 2] || sortedQuestions[sortedQuestions.length - 1],  // Hard → $800
+            sortedQuestions[sortedQuestions.length - 1]  // Hardest → $1000
+          ];
+          
+          selectedByCategory.push({ categoryName: cat.name, questions: selected });
+          console.log(`   ✅ Selected 5 questions for ${cat.name}: ${selected.filter(q => q.difficulty === 'easy').length} easy, ${selected.filter(q => q.difficulty === 'medium').length} medium, ${selected.filter(q => q.difficulty === 'hard').length} hard`);
+          
         } catch (error) {
           console.warn(`   ⚠️  Failed to fetch ${cat.name}, skipping...`);
         }
       }
       
-      console.log(`📝 Total fetched: ${allQuestions.length} questions from ${diverseCategories.length} categories`);
-      
-      // Ensure we have enough questions
-      if (allQuestions.length < 30) {
-        throw new Error(`Insufficient questions after filtering: got ${allQuestions.length}, need 30`);
+      // Ensure we have enough categories
+      if (selectedByCategory.length < 6) {
+        throw new Error(`Insufficient categories: got ${selectedByCategory.length}, need 6`);
       }
       
-      // Sort ALL questions by difficulty: easy → medium → hard
-      const difficultyOrder = { easy: 1, medium: 2, hard: 3 };
-      const allSortedQuestions = [...allQuestions].sort((a, b) => {
-        const orderA = difficultyOrder[a.difficulty as keyof typeof difficultyOrder] || 2;
-        const orderB = difficultyOrder[b.difficulty as keyof typeof difficultyOrder] || 2;
-        return orderA - orderB;
-      });
-      
-      // Take first 30 questions (guarantees easiest questions come first)
-      const selectedQuestions = allSortedQuestions.slice(0, 30);
-      console.log(`📊 Selected 30 questions by difficulty: ${selectedQuestions.filter(q => q.difficulty === 'easy').length} easy, ${selectedQuestions.filter(q => q.difficulty === 'medium').length} medium, ${selectedQuestions.filter(q => q.difficulty === 'hard').length} hard`);
-      
-      // Group into 6 categories (5 questions each)
-      const categoryMap = new Map<string, typeof selectedQuestions>();
-      
-      for (const q of selectedQuestions) {
-        if (!categoryMap.has(q.category)) {
-          categoryMap.set(q.category, []);
-        }
-        categoryMap.get(q.category)!.push(q);
-      }
-      
-      // Take up to 6 categories
-      const categoryNames = Array.from(categoryMap.keys()).slice(0, 6);
+      console.log(`📝 Successfully prepared ${selectedByCategory.length} categories with proper difficulty distribution`);
       
       const values = [200, 400, 600, 800, 1000];
       
@@ -442,21 +447,21 @@ export class DbStorage implements IStorage {
         await tx.delete(schema.categories);
         
         // Assign questions to categories and values
-        let questionIndex = 0;
-        for (const categoryName of categoryNames) {
+        for (const catData of selectedByCategory) {
           // Create category
           const [category] = await tx.insert(schema.categories).values({
-            name: categoryName,
+            name: catData.categoryName,
             weight: 1.0
           }).returning();
           
-          console.log(`   ✅ Created category: ${categoryName}`);
+          console.log(`   ✅ Created category: ${catData.categoryName}`);
           
-          // Assign 5 questions to this category from our sorted list
-          for (let i = 0; i < 5 && questionIndex < selectedQuestions.length; i++) {
-            const tq = selectedQuestions[questionIndex++];
+          // Assign the 5 selected questions to this category
+          // They're already sorted: 2 easy, 1 medium, 2 hard
+          for (let i = 0; i < 5 && i < catData.questions.length; i++) {
+            const tq = catData.questions[i];
             const converted = openTDBClient.convertQuestion(tq);
-            const assignedValue = values[i];
+            const assignedValue = values[i];  // $200, $400, $600, $800, $1000
             
             const [question] = await tx.insert(schema.questions).values({
               categoryId: category.id,
