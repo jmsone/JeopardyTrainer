@@ -13,6 +13,7 @@ import type {
   UserAchievement,
   Notification,
   UserGoals,
+  CategoryMastery,
   InsertCategory,
   InsertQuestion,
   InsertUserProgress,
@@ -39,6 +40,7 @@ import type {
 } from '@shared/schema';
 import type { IStorage } from './storage';
 import { openTDBClient } from './opentdb';
+import { calculateWeightedCorrectScore, determineMasteryLevel } from './utils/mastery-calculations';
 
 export class DbStorage implements IStorage {
   private initialized = false;
@@ -1008,6 +1010,133 @@ export class DbStorage implements IStorage {
 
   async evaluateAchievements(): Promise<void> {
     // Stub implementation
+  }
+
+  // ==================== CATEGORY MASTERY ====================
+  
+  async getCategoryMasteryRecords(userId?: string): Promise<CategoryMastery[]> {
+    if (!userId) return [];
+    
+    return await db
+      .select()
+      .from(schema.categoryMastery)
+      .where(eq(schema.categoryMastery.userId, userId));
+  }
+
+  async updateCategoryMastery(
+    userId: string,
+    categoryName: string,
+    isCorrect: boolean,
+    answeredAt: Date
+  ): Promise<CategoryMastery> {
+    // Find existing record
+    const [existing] = await db
+      .select()
+      .from(schema.categoryMastery)
+      .where(and(
+        eq(schema.categoryMastery.userId, userId),
+        eq(schema.categoryMastery.categoryName, categoryName)
+      ))
+      .limit(1);
+    
+    if (!existing) {
+      // Create new record
+      const [created] = await db
+        .insert(schema.categoryMastery)
+        .values({
+          userId,
+          categoryName,
+          totalCorrect: isCorrect ? 1 : 0,
+          totalAnswered: 1,
+          weightedCorrectScore: 0,
+          lastAnswered: answeredAt,
+          masteryLevel: 'novice'
+        })
+        .returning();
+      
+      // Recalculate weighted score
+      return await this.recalculateCategoryMastery(created.id, userId, categoryName);
+    }
+    
+    // Update existing record
+    const [updated] = await db
+      .update(schema.categoryMastery)
+      .set({
+        totalAnswered: existing.totalAnswered + 1,
+        totalCorrect: existing.totalCorrect + (isCorrect ? 1 : 0),
+        lastAnswered: answeredAt,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.categoryMastery.id, existing.id))
+      .returning();
+    
+    // Recalculate weighted score
+    return await this.recalculateCategoryMastery(updated.id, userId, categoryName);
+  }
+
+  private async recalculateCategoryMastery(
+    recordId: string,
+    userId: string,
+    categoryName: string
+  ): Promise<CategoryMastery> {
+    // Get the current mastery record to access counts
+    const [currentRecord] = await db
+      .select()
+      .from(schema.categoryMastery)
+      .where(eq(schema.categoryMastery.id, recordId))
+      .limit(1);
+    
+    if (!currentRecord) {
+      throw new Error('Category mastery record not found');
+    }
+    
+    // Get all answers for this category
+    const categoryAnswers = await db
+      .select({
+        correct: schema.userProgress.correct,
+        answeredAt: schema.userProgress.answeredAt
+      })
+      .from(schema.userProgress)
+      .innerJoin(schema.questions, eq(schema.userProgress.questionId, schema.questions.id))
+      .innerJoin(schema.categories, eq(schema.questions.categoryId, schema.categories.id))
+      .where(and(
+        eq(schema.userProgress.userId, userId),
+        eq(schema.categories.name, categoryName)
+      ));
+    
+    // Calculate weighted score using time decay
+    // Use the authoritative 'correct' field, not selfAssessment
+    let weightedScore = 0;
+    if (categoryAnswers.length > 0) {
+      weightedScore = calculateWeightedCorrectScore(
+        categoryAnswers.map(a => ({
+          correct: a.correct,
+          answeredAt: a.answeredAt
+        }))
+      );
+    } else if (currentRecord.totalAnswered > 0) {
+      // Fallback: If query returned no answers but we have counts,
+      // calculate a simple score based on accuracy
+      const accuracy = currentRecord.totalCorrect / currentRecord.totalAnswered;
+      weightedScore = accuracy * 100;
+      console.warn(`⚠️  Category mastery recalculation found no answers for ${categoryName}, using fallback score: ${weightedScore}`);
+    }
+    
+    // Determine mastery level
+    const masteryLevel = determineMasteryLevel(weightedScore);
+    
+    // Update the record
+    const [updated] = await db
+      .update(schema.categoryMastery)
+      .set({
+        weightedCorrectScore: weightedScore,
+        masteryLevel: masteryLevel,
+        updatedAt: new Date()
+      })
+      .where(eq(schema.categoryMastery.id, recordId))
+      .returning();
+    
+    return updated;
   }
 
   private formatTimeAgo(date: Date): string {
