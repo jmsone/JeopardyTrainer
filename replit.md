@@ -35,6 +35,7 @@ A comprehensive trivia training application featuring Google login authenticatio
 - Category diversity in question selection
 
 ## Recent Changes
+- **✅ CRITICAL: Fixed ES module import bug** - Replaced CommonJS `require()` calls with ES6 `import` statements in server/storage.ts mastery calculation functions. Previous code caused "ReferenceError: require is not defined" preventing category mastery from being saved. Fix validated with full e2e testing (4 questions answered, category mastery tracking confirmed, readiness calculation working). (2025-10-29)
 - **✅ CRITICAL: Mastery-based readiness system** - Complete overhaul of readiness calculation from old formula (60% Anytime Test + 25% Game Mode + 15% Spaced Repetition) to new category mastery system (60% Category Mastery + 20% Breadth + 20% Anytime Test). Requires ~50 time-weighted correct answers per category for mastery. (2025-10-29)
 - **✅ CategoryMastery data model** - Added database table tracking per-category statistics: totalCorrect, totalAnswered, weightedCorrectScore (time-decayed 0-100 scale), masteryLevel (novice/intermediate/advanced/expert/master), lastAnswered. Updates after each answer to maintain accurate category performance metrics. (2025-10-29)
 - **✅ Time decay algorithm** - Implemented normalized exponential decay function reaching exactly 0% at 6 months (180 days). Formula: (e^(-k*days) - e^(-k*180)) / (1 - e^(-k*180)) where k=3/180. Ensures old answers don't contribute to mastery while providing smooth exponential curve. (2025-10-29)
