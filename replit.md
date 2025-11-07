@@ -28,13 +28,10 @@ A comprehensive trivia training application featuring optional Google login auth
 - Algorithms: Spaced repetition (SM-2 or similar)
 
 ## Static Asset Deployment
-**CRITICAL**: Production static file serving requires build command configuration.
-- Vite builds to: `dist/public` (configured in vite.config.ts - cannot modify)
-- Express serves from: `server/public` (configured in server/vite.ts - cannot modify)
-- Solution: Build command copies files after build: `npm run build && cp -r dist/public/* server/public/`
-- This is configured in Replit Publishing → Overview → Edit Commands and Secrets
-- The `server/public` directory is created during build and contains the production static files
-- **Do not commit `server/public` to git** - it's generated during deployment
+- Vite builds to: `dist/public` (configured in vite.config.ts)
+- Express bundled server runs from `dist/index.js`
+- Path resolution: `import.meta.dirname` resolves to `dist`, so `dist/public` is found correctly
+- **CRITICAL**: Static file serving must be configured BEFORE awaiting storage initialization to prevent 404 errors during slow database initialization
 
 ## Data Quality Measures
 - Questions sourced from Open Trivia Database
@@ -44,7 +41,7 @@ A comprehensive trivia training application featuring optional Google login auth
 - Category diversity in question selection
 
 ## Recent Changes
-- **✅ CRITICAL: Fixed production deployment 404 errors** - Resolved static file serving issue where Vite builds to `dist/public` but Express serves from `server/public`. Updated Replit Publishing build command to copy files after build: `npm run build && cp -r dist/public/* server/public/`. This approach required due to immutable build configuration files (vite.config.ts, server/vite.ts, package.json). Build command configured via Publishing → Overview → Edit Commands and Secrets. Production deployments now serve static files correctly. (2025-11-07)
+- **✅ CRITICAL: Fixed production deployment 404 errors** - Resolved initialization order issue blocking static file serving. Refactored server/index.ts to configure static file serving (Vite dev server or express.static) BEFORE awaiting storage initialization. Previously, `registerRoutes()` would wait for database storage to initialize and fetch game board from Open Trivia DB, blocking the setup of static file serving and causing "Cannot GET /" errors. Now static files are served immediately while storage initializes in background. Path resolution confirmed correct: Vite builds to `dist/public`, bundled server runs from `dist/index.js` where `import.meta.dirname="dist"` correctly resolves to `dist/public`. Both development and production modes tested and working. (2025-11-07)
 - **✅ CRITICAL: Fixed production deployment health checks** - Completely refactored server startup sequence to fix health check failures. Server now listens on port 5000 IMMEDIATELY before initialization, then runs storage/route setup in background. Root `/` endpoint ALWAYS returns 200 for deployment health checks (HEAD and GET requests). Added `/healthz` endpoint for detailed readiness status. Implemented smart routing that serves health checks during initialization and React app once ready. Error handling logs failures without crashing server. All tests passing - ready for production deployment. (2025-11-07)
 - **✅ Anonymous user answered question tracking** - Created `useAnsweredQuestions` hook that tracks answered questions in sessionStorage for anonymous users and fetches from server for authenticated users. Anonymous users now see visual feedback (checkmarks, disabled state) when answering questions, with progress persisting during browser session. (2025-11-07)
 - **✅ Anytime Test for anonymous users** - Modified `/api/anytime-test-questions` endpoint to serve 50 random questions for both anonymous and authenticated users. Anonymous users get generic question set, authenticated users get personalized set excluding previously answered questions. (2025-11-07)
