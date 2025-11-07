@@ -11,7 +11,27 @@ app.use(express.urlencoded({ extended: false }));
 let isReady = false;
 let initializationError: Error | null = null;
 
-// Health check endpoint - responds immediately for deployment health checks
+// Health check endpoint - ALWAYS returns 200 for deployment health checks
+// This is checked by the deployment platform to verify the server is running
+app.head("/", (_req, res) => {
+  res.status(200).end();
+});
+
+app.get("/", (_req, res, next) => {
+  // During initialization, return a simple 200 for health checks
+  // but if it's a browser request (accepts HTML), pass through to static serving
+  const acceptsHtml = _req.accepts('html');
+  
+  if (!isReady && !acceptsHtml) {
+    // Non-browser request during initialization - return simple 200 for health check
+    return res.status(200).json({ status: "initializing" });
+  }
+  
+  // Once ready, or if browser request, pass through to static file serving
+  next();
+});
+
+// Alternative health check endpoint
 app.get("/healthz", (_req, res) => {
   if (isReady) {
     res.status(200).json({ status: "ready" });
@@ -25,15 +45,15 @@ app.get("/healthz", (_req, res) => {
   }
 });
 
-// Global readiness middleware - gates ALL requests (except /healthz) during initialization
+// Global readiness middleware - gates API requests during initialization
 app.use((req, res, next) => {
-  // Skip readiness check for health check endpoint
-  if (req.path === "/healthz") {
+  // Skip readiness check for health check endpoints
+  if (req.path === "/healthz" || req.path === "/") {
     return next();
   }
 
-  // Block all requests until initialization completes
-  if (!isReady) {
+  // Block API requests until initialization completes
+  if (!isReady && req.path.startsWith("/api")) {
     console.log(`⏸️  Request blocked during initialization: ${req.method} ${req.path}`);
     if (initializationError) {
       return res.status(503).json({ 
