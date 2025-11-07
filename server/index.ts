@@ -120,20 +120,8 @@ server.listen({
 // Initialize in background - don't block server startup
 (async () => {
   try {
-    await registerRoutes(app, server);
-    console.log("✅ Routes registered successfully");
-
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-
-      console.error("❌ Request error:", { status, message, error: err });
-      res.status(status).json({ message });
-    });
-
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
+    // Set up static file serving FIRST - this should never be blocked
+    // Static files don't depend on database or routes being ready
     if (app.get("env") === "development") {
       await setupVite(app, server);
       console.log("✅ Vite development server configured");
@@ -141,6 +129,19 @@ server.listen({
       serveStatic(app);
       console.log("✅ Static file serving configured");
     }
+
+    // Now register routes (includes storage initialization)
+    await registerRoutes(app, server);
+    console.log("✅ Routes registered successfully");
+
+    // Error handler after routes
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+
+      console.error("❌ Request error:", { status, message, error: err });
+      res.status(status).json({ message });
+    });
 
     // Mark as ready
     isReady = true;
