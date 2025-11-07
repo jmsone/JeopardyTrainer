@@ -561,16 +561,8 @@ export class DbStorage implements IStorage {
               jServiceId: null
             }).returning();
             
-            // Initialize spaced repetition data for system
-            await tx.insert(schema.spacedRepetition).values({
-              userId: "system",
-              questionId: question.id,
-              easeFactor: 2.5,
-              interval: 1,
-              repetitions: 0,
-              nextReview: new Date(),
-              lastReviewed: null,
-            });
+            // Note: Spaced repetition records are created per-user when they answer questions
+            // not during initialization (questions are global, spaced repetition is user-specific)
           }
         }
       });
