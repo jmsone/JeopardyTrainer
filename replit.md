@@ -28,13 +28,13 @@ A comprehensive trivia training application featuring optional Google login auth
 - Algorithms: Spaced repetition (SM-2 or similar)
 
 ## Static Asset Deployment
-**CRITICAL**: Production static file serving requires a symlink due to immutable build configuration.
+**CRITICAL**: Production static file serving requires build command configuration.
 - Vite builds to: `dist/public` (configured in vite.config.ts - cannot modify)
 - Express serves from: `server/public` (configured in server/vite.ts - cannot modify)
-- Solution: Git-tracked symlink `server/public -> ../dist/public`
-- The symlink persists through Replit Autoscale deployment on Linux filesystems
-- **If symlink is missing**, recreate with: `ln -s ../dist/public server/public`
-- Deployment validation: `npm run build && ls -l server/public && npm run start` then verify `/` returns HTML
+- Solution: Build command copies files after build: `npm run build && cp -r dist/public/* server/public/`
+- This is configured in Replit Publishing → Overview → Edit Commands and Secrets
+- The `server/public` directory is created during build and contains the production static files
+- **Do not commit `server/public` to git** - it's generated during deployment
 
 ## Data Quality Measures
 - Questions sourced from Open Trivia Database
@@ -44,7 +44,7 @@ A comprehensive trivia training application featuring optional Google login auth
 - Category diversity in question selection
 
 ## Recent Changes
-- **✅ CRITICAL: Fixed production deployment 404 errors** - Resolved static file serving issue where Vite builds to `dist/public` but Express serves from `server/public`. Created git-tracked symlink `server/public -> ../dist/public` that persists through Autoscale deployment. This approach required due to immutable build configuration files (vite.config.ts, server/vite.ts, package.json, .replit). Symlink solution validated by architect review and documented in Technical Architecture section. Production deployments now serve static files correctly. (2025-11-07)
+- **✅ CRITICAL: Fixed production deployment 404 errors** - Resolved static file serving issue where Vite builds to `dist/public` but Express serves from `server/public`. Updated Replit Publishing build command to copy files after build: `npm run build && cp -r dist/public/* server/public/`. This approach required due to immutable build configuration files (vite.config.ts, server/vite.ts, package.json). Build command configured via Publishing → Overview → Edit Commands and Secrets. Production deployments now serve static files correctly. (2025-11-07)
 - **✅ CRITICAL: Fixed production deployment health checks** - Completely refactored server startup sequence to fix health check failures. Server now listens on port 5000 IMMEDIATELY before initialization, then runs storage/route setup in background. Root `/` endpoint ALWAYS returns 200 for deployment health checks (HEAD and GET requests). Added `/healthz` endpoint for detailed readiness status. Implemented smart routing that serves health checks during initialization and React app once ready. Error handling logs failures without crashing server. All tests passing - ready for production deployment. (2025-11-07)
 - **✅ Anonymous user answered question tracking** - Created `useAnsweredQuestions` hook that tracks answered questions in sessionStorage for anonymous users and fetches from server for authenticated users. Anonymous users now see visual feedback (checkmarks, disabled state) when answering questions, with progress persisting during browser session. (2025-11-07)
 - **✅ Anytime Test for anonymous users** - Modified `/api/anytime-test-questions` endpoint to serve 50 random questions for both anonymous and authenticated users. Anonymous users get generic question set, authenticated users get personalized set excluding previously answered questions. (2025-11-07)
