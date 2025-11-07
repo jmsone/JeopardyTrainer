@@ -437,10 +437,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Anytime Test Questions
   app.get("/api/anytime-test-questions", optionalAuth, async (req: any, res) => {
     try {
-      if (!req.user || !req.user.claims) {
-        return res.json([]);
-      }
-      const userId = req.user.claims.sub;
+      const userId = req.user?.claims?.sub;
+      // For anonymous users, pass undefined to get a generic 50-question set
+      // For authenticated users, pass userId to get personalized set
       const questions = await storage.getAnytimeTestSet(userId);
       res.json(questions || []);
     } catch (error) {

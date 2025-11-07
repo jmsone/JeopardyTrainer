@@ -6,6 +6,7 @@ import { ChevronLeft, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { QuestionWithCategory } from "@shared/schema";
 import EnhancedFeedbackModal from "./enhanced-feedback-modal";
+import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 
 interface QuestionViewProps {
   questionId: string;
@@ -19,6 +20,7 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
   const [showAnswer, setShowAnswer] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [userAssessment, setUserAssessment] = useState<"correct" | "incorrect" | "unsure">("unsure");
+  const { addAnsweredQuestion } = useAnsweredQuestions();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -62,6 +64,9 @@ export default function QuestionView({ questionId, onAnswerSubmit, onBack }: Que
     if (!question) return;
 
     setUserAssessment(assessment);
+
+    // Track answered question locally for anonymous users
+    addAnsweredQuestion(question.id, assessment);
 
     await submitAnswerMutation.mutateAsync({
       questionId: question.id,

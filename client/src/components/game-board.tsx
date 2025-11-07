@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Target, Zap, RotateCcw, Timer } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Category, QuestionWithCategory, CategoryStats } from "@shared/schema";
+import { useAnsweredQuestions } from "@/hooks/useAnsweredQuestions";
 
 interface GameBoardProps {
   onQuestionSelect: (questionId: string) => void;
@@ -24,9 +25,7 @@ export default function GameBoard({ onQuestionSelect, onRapidFire, onAnytimeTest
     queryKey: ["/api/stats/overall"],
   });
 
-  const { data: answeredQuestions = [] } = useQuery<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>({
-    queryKey: ["/api/answered-questions"],
-  });
+  const { answeredQuestions, clearAnsweredQuestions } = useAnsweredQuestions();
 
   const resetBoardMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/reset-board"),
