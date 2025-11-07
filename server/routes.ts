@@ -8,7 +8,14 @@ import { setupAuth, isAuthenticated, optionalAuth } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware - set up first
-  await setupAuth(app);
+  console.log("🔐 Setting up authentication...");
+  try {
+    await setupAuth(app);
+    console.log("✅ Authentication configured");
+  } catch (error) {
+    console.error("❌ Failed to setup authentication:", error);
+    throw error;
+  }
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
