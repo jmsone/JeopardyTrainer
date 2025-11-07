@@ -1,13 +1,23 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, initializeStorage } from "./storage";
 import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema, insertTestAttemptSchema, insertUserGoalsSchema } from "@shared/schema";
 import { z } from "zod";
 import { perplexityService } from "./perplexity-service";
 import { setupAuth, isAuthenticated, optionalAuth } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware - set up first
+  // Initialize storage first (critical for production database)
+  console.log("💾 Initializing storage...");
+  try {
+    await initializeStorage();
+    console.log("✅ Storage initialized");
+  } catch (error) {
+    console.error("❌ Failed to initialize storage:", error);
+    throw error;
+  }
+
+  // Auth middleware - set up next
   console.log("🔐 Setting up authentication...");
   try {
     await setupAuth(app);
@@ -432,10 +442,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const userId = req.user.claims.sub;
       const questions = await storage.getAnytimeTestSet(userId);
-      res.json(questions);
+      res.json(questions || []);
     } catch (error) {
       console.error("Failed to get anytime test questions:", error);
-      res.status(500).json({ message: "Failed to fetch anytime test questions" });
+      // Return empty array instead of 500 error to prevent UI breakage
+      res.json([]);
     }
   });
 
@@ -489,10 +500,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const { unread } = req.query;
       const notifications = await storage.getNotifications(unread === 'true', userId);
-      res.json(notifications);
+      res.json(notifications || []);
     } catch (error) {
       console.error("Failed to get notifications:", error);
-      res.status(500).json({ message: "Failed to fetch notifications" });
+      // Return empty array instead of 500 error to prevent UI breakage
+      res.json([]);
     }
   });
 
@@ -518,10 +530,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const userId = req.user.claims.sub;
       const count = await storage.getUnreadNotificationCount(userId);
-      res.json({ count });
+      res.json({ count: count || 0 });
     } catch (error) {
       console.error("Failed to get unread notification count:", error);
-      res.status(500).json({ message: "Failed to get unread notification count" });
+      // Return 0 instead of 500 error to prevent UI breakage
+      res.json({ count: 0 });
     }
   });
 

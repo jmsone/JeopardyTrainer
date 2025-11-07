@@ -1571,9 +1571,20 @@ import { DbStorage } from './db-storage';
 // Set USE_DB_STORAGE=true to enable database-backed storage
 const USE_DB_STORAGE = process.env.USE_DB_STORAGE === 'true' || process.env.NODE_ENV === 'production';
 
-export const storage: IStorage = USE_DB_STORAGE 
+const storageInstance: IStorage = USE_DB_STORAGE 
   ? new DbStorage() 
   : new MemStorage();
 
 console.log(`💾 Using ${USE_DB_STORAGE ? 'Database' : 'In-Memory'} Storage`);
+
+// Export initialization function for server startup
+export async function initializeStorage(): Promise<void> {
+  if (USE_DB_STORAGE && storageInstance instanceof DbStorage) {
+    console.log('⏳ Waiting for database storage initialization...');
+    await storageInstance.waitForInitialization();
+    console.log('✅ Database storage initialized and ready');
+  }
+}
+
+export const storage: IStorage = storageInstance;
 

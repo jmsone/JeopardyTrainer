@@ -47,22 +47,34 @@ export class DbStorage implements IStorage {
   private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializeData();
+    // Store the initialization promise but don't await it in constructor
+    this.initializationPromise = this.initializeData();
+  }
+
+  async waitForInitialization(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+    }
   }
 
   private async initializeData() {
-    // Initialize achievements catalog on startup
-    await this.initializeAchievements();
-    
-    // Check if we have questions in the database
-    const existingQuestions = await db.select().from(schema.questions).limit(1);
-    
-    if (existingQuestions.length === 0) {
-      console.log('🔄 No questions found in database, initializing game board...');
-      await this.fetchFreshGameBoard();
-    } else {
-      console.log('✅ Questions already exist in database');
-      this.initialized = true;
+    try {
+      // Initialize achievements catalog on startup
+      await this.initializeAchievements();
+      
+      // Check if we have questions in the database
+      const existingQuestions = await db.select().from(schema.questions).limit(1);
+      
+      if (existingQuestions.length === 0) {
+        console.log('🔄 No questions found in database, initializing game board...');
+        await this.fetchFreshGameBoard();
+      } else {
+        console.log('✅ Questions already exist in database');
+        this.initialized = true;
+      }
+    } catch (error) {
+      console.error('💥 Failed to initialize database storage:', error);
+      throw error;
     }
   }
 
