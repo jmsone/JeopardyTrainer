@@ -121,8 +121,13 @@ server.listen({
 // Initialize in background - don't block server startup
 (async () => {
   try {
-    // Set up static file serving FIRST - this should never be blocked
-    // Static files don't depend on database or routes being ready
+    // Register API routes FIRST - before static file serving
+    // This ensures /api/* routes are handled before Vite/static middleware catches them
+    await registerRoutes(app, server);
+    console.log("✅ Routes registered successfully");
+
+    // Set up static file serving AFTER routes
+    // This way, API routes take precedence over static file serving
     if (app.get("env") === "development") {
       await setupVite(app, server);
       console.log("✅ Vite development server configured");
@@ -130,10 +135,6 @@ server.listen({
       serveStatic(app);
       console.log("✅ Static file serving configured");
     }
-
-    // Now register routes (includes storage initialization)
-    await registerRoutes(app, server);
-    console.log("✅ Routes registered successfully");
 
     // Error handler after routes
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
