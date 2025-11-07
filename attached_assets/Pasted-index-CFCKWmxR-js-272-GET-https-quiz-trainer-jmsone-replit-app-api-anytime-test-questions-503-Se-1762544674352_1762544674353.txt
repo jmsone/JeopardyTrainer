@@ -1,0 +1,71 @@
+index-CFCKWmxR.js:272  GET https://quiz-trainer-jmsone.replit.app/api/anytime-test-questions 503 (Service Unavailable)
+queryFn @ index-CFCKWmxR.js:272
+o @ index-CFCKWmxR.js:48
+w @ index-CFCKWmxR.js:48
+start @ index-CFCKWmxR.js:48
+fetch @ index-CFCKWmxR.js:48
+No @ index-CFCKWmxR.js:48
+setOptions @ index-CFCKWmxR.js:48
+(anonymous) @ index-CFCKWmxR.js:48
+ul @ index-CFCKWmxR.js:40
+ps @ index-CFCKWmxR.js:40
+MN @ index-CFCKWmxR.js:40
+hr @ index-CFCKWmxR.js:40
+Ym @ index-CFCKWmxR.js:40
+ur @ index-CFCKWmxR.js:38
+(anonymous) @ index-CFCKWmxR.js:40Understand this error
+index-CFCKWmxR.js:48  GET https://quiz-trainer-jmsone.replit.app/api/stats/categories 503 (Service Unavailable)
+(anonymous) @ index-CFCKWmxR.js:48
+o @ index-CFCKWmxR.js:48
+w @ index-CFCKWmxR.js:48
+start @ index-CFCKWmxR.js:48
+fetch @ index-CFCKWmxR.js:48
+No @ index-CFCKWmxR.js:48
+onSubscribe @ index-CFCKWmxR.js:48
+subscribe @ index-CFCKWmxR.js:48
+(anonymous) @ index-CFCKWmxR.js:48
+Bg @ index-CFCKWmxR.js:38
+ul @ index-CFCKWmxR.js:40
+ps @ index-CFCKWmxR.js:40
+MN @ index-CFCKWmxR.js:40
+hr @ index-CFCKWmxR.js:40
+Ym @ index-CFCKWmxR.js:40
+ur @ index-CFCKWmxR.js:38
+(anonymous) @ index-CFCKWmxR.js:40Understand this error
+index-CFCKWmxR.js:48  GET https://quiz-trainer-jmsone.replit.app/api/categories 503 (Service Unavailable)
+(anonymous) @ index-CFCKWmxR.js:48
+o @ index-CFCKWmxR.js:48
+w @ index-CFCKWmxR.js:48
+start @ index-CFCKWmxR.js:48
+fetch @ index-CFCKWmxR.js:48
+No @ index-CFCKWmxR.js:48
+onSubscribe @ index-CFCKWmxR.js:48
+subscribe @ index-CFCKWmxR.js:48
+(anonymous) @ index-CFCKWmxR.js:48
+Bg @ index-CFCKWmxR.js:38
+ul @ index-CFCKWmxR.js:40
+ps @ index-CFCKWmxR.js:40
+MN @ index-CFCKWmxR.js:40
+hr @ index-CFCKWmxR.js:40
+Ym @ index-CFCKWmxR.js:40
+ur @ index-CFCKWmxR.js:38
+(anonymous) @ index-CFCKWmxR.js:40Understand this error
+index-CFCKWmxR.js:48  GET https://quiz-trainer-jmsone.replit.app/api/stats/overall 503 (Service Unavailable)
+(anonymous) @ index-CFCKWmxR.js:48
+o @ index-CFCKWmxR.js:48
+w @ index-CFCKWmxR.js:48
+start @ index-CFCKWmxR.js:48
+fetch @ index-CFCKWmxR.js:48
+No @ index-CFCKWmxR.js:48
+onSubscribe @ index-CFCKWmxR.js:48
+subscribe @ index-CFCKWmxR.js:48
+(anonymous) @ index-CFCKWmxR.js:48
+Bg @ index-CFCKWmxR.js:38
+ul @ index-CFCKWmxR.js:40
+ps @ index-CFCKWmxR.js:40
+MN @ index-CFCKWmxR.js:40
+hr @ index-CFCKWmxR.js:40
+Ym @ index-CFCKWmxR.js:40
+ur @ index-CFCKWmxR.js:38
+(anonymous) @ index-CFCKWmxR.js:40Understand this error
+index-CFCKWmxR.js:48  GET https://quiz-trainer-jmsone.replit.app/api/auth/user 503 (Service Unavailable)

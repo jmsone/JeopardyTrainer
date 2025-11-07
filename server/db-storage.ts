@@ -44,16 +44,27 @@ import { calculateWeightedCorrectScore, determineMasteryLevel } from './utils/ma
 
 export class DbStorage implements IStorage {
   private initialized = false;
-  private initializationPromise: Promise<void> | null = null;
+  private startupPromise: Promise<void> | null = null;
+  private activeFetch: Promise<void> | null = null;
+  private fetchStartedAt: number | null = null;
 
   constructor() {
-    // Store the initialization promise but don't await it in constructor
-    this.initializationPromise = this.initializeData();
+    // Start initialization in background but don't block on it
+    this.startupPromise = this.initializeData();
   }
 
   async waitForInitialization(): Promise<void> {
-    if (this.initializationPromise) {
-      await this.initializationPromise;
+    if (this.startupPromise) {
+      // Add timeout to prevent blocking server startup indefinitely
+      const timeoutMs = 35000; // 35 seconds (slightly longer than initializeData timeout)
+      const timeoutPromise = new Promise<void>((resolve) => 
+        setTimeout(() => {
+          console.log('⚠️  waitForInitialization() timed out - server continuing anyway');
+          resolve();
+        }, timeoutMs)
+      );
+      
+      await Promise.race([this.startupPromise, timeoutPromise]);
     }
   }
 
@@ -67,14 +78,30 @@ export class DbStorage implements IStorage {
       
       if (existingQuestions.length === 0) {
         console.log('🔄 No questions found in database, initializing game board...');
-        await this.fetchFreshGameBoard();
+        
+        // Call _doFetchFreshGameBoard directly to avoid circular reference with initializationPromise
+        // Add timeout to prevent blocking server startup indefinitely
+        const timeoutMs = 30000; // 30 seconds
+        const fetchPromise = this._doFetchFreshGameBoard();
+        const timeoutPromise = new Promise<void>((_, reject) => 
+          setTimeout(() => reject(new Error('Game board initialization timeout')), timeoutMs)
+        );
+        
+        try {
+          await Promise.race([fetchPromise, timeoutPromise]);
+        } catch (error) {
+          console.error('⚠️  Game board initialization failed or timed out:', error);
+          console.log('⚠️  Server will continue - game board will retry on first request');
+          // DO NOT set initialized=true here - allow retries on subsequent requests
+          // The server can start serving requests, and endpoints will retry fetching
+        }
       } else {
         console.log('✅ Questions already exist in database');
         this.initialized = true;
       }
     } catch (error) {
       console.error('💥 Failed to initialize database storage:', error);
-      throw error;
+      // Allow server to start and retry later
     }
   }
 
@@ -105,6 +132,12 @@ export class DbStorage implements IStorage {
   // ==================== CATEGORIES ====================
   
   async getCategories(): Promise<Category[]> {
+    // Check if we have categories, if not, try to fetch game board
+    const categories = await db.select().from(schema.categories).limit(1);
+    if (categories.length === 0) {
+      console.log('📊 No categories found, triggering game board fetch...');
+      await this.fetchFreshGameBoard();
+    }
     return await db.select().from(schema.categories);
   }
 
@@ -116,6 +149,12 @@ export class DbStorage implements IStorage {
   // ==================== QUESTIONS ====================
   
   async getQuestions(): Promise<Question[]> {
+    // Check if we have questions, if not, try to fetch game board
+    const questions = await db.select().from(schema.questions).limit(1);
+    if (questions.length === 0) {
+      console.log('📝 No questions found, triggering game board fetch...');
+      await this.fetchFreshGameBoard();
+    }
     return await db.select().from(schema.questions);
   }
 
@@ -372,19 +411,21 @@ export class DbStorage implements IStorage {
       return;
     }
 
-    // If initialization is in progress, wait for it
-    if (this.initializationPromise) {
-      return this.initializationPromise;
+    // If fetch is in progress, wait for it
+    if (this.activeFetch) {
+      return this.activeFetch;
     }
 
-    // Start initialization and store the promise
-    this.initializationPromise = this._doFetchFreshGameBoard();
+    // Start fetch and store the promise
+    this.activeFetch = this._doFetchFreshGameBoard();
+    this.fetchStartedAt = Date.now();
     
     try {
-      await this.initializationPromise;
+      await this.activeFetch;
     } finally {
       // Clear the promise after completion (success or failure)
-      this.initializationPromise = null;
+      this.activeFetch = null;
+      this.fetchStartedAt = null;
     }
   }
 
