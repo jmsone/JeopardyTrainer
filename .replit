@@ -7,7 +7,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["sh", "-c", "npm run build && cp -r dist/public/* server/public/"]
+build = ["sh", "-c", "npm run build && mkdir -p server/public && cp -r dist/public/* server/public/"]
 run = ["npm", "run", "start"]
 
 [[ports]]
@@ -17,10 +17,6 @@ externalPort = 80
 [[ports]]
 localPort = 8080
 externalPort = 8080
-
-[[ports]]
-localPort = 33065
-externalPort = 8099
 
 [[ports]]
 localPort = 34487
