@@ -1,12 +1,12 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage, initializeStorage } from "./storage";
 import { insertUserProgressSchema, insertSpacedRepetitionSchema, insertLearningMaterialSchema, insertStudyMaterialSchema, insertTestAttemptSchema, insertUserGoalsSchema } from "@shared/schema";
 import { z } from "zod";
 import { perplexityService } from "./perplexity-service";
 import { setupAuth, isAuthenticated, optionalAuth } from "./replitAuth";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, server: Server): Promise<void> {
   // Initialize storage first (critical for production database)
   console.log("💾 Initializing storage...");
   try {
@@ -668,9 +668,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to award achievement" });
     }
   });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }
 
 // Spaced repetition algorithm (simplified SM-2)

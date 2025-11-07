@@ -1,10 +1,53 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Readiness flag - gates API routes until initialization completes
+let isReady = false;
+let initializationError: Error | null = null;
+
+// Health check endpoint - responds immediately for deployment health checks
+app.get("/healthz", (_req, res) => {
+  if (isReady) {
+    res.status(200).json({ status: "ready" });
+  } else if (initializationError) {
+    res.status(503).json({ 
+      status: "error", 
+      message: initializationError.message 
+    });
+  } else {
+    res.status(503).json({ status: "initializing" });
+  }
+});
+
+// Global readiness middleware - gates ALL requests (except /healthz) during initialization
+app.use((req, res, next) => {
+  // Skip readiness check for health check endpoint
+  if (req.path === "/healthz") {
+    return next();
+  }
+
+  // Block all requests until initialization completes
+  if (!isReady) {
+    console.log(`⏸️  Request blocked during initialization: ${req.method} ${req.path}`);
+    if (initializationError) {
+      return res.status(503).json({ 
+        message: "Service unavailable - initialization failed",
+        error: initializationError.message 
+      });
+    }
+    return res.status(503).json({ 
+      message: "Service initializing - please wait" 
+    });
+  }
+
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -36,11 +79,28 @@ app.use((req, res, next) => {
   next();
 });
 
+// Create HTTP server immediately
+const server = createServer(app);
+
+// ALWAYS serve the app on the port specified in the environment variable PORT
+// Other ports are firewalled. Default to 5000 if not specified.
+const port = parseInt(process.env.PORT || '5000', 10);
+
+// Start listening immediately - BEFORE initialization
+server.listen({
+  port,
+  host: "0.0.0.0",
+  reusePort: true,
+}, () => {
+  log(`serving on port ${port}`);
+  console.log("✅ Server listening on port", port);
+  console.log("🚀 Starting background initialization...");
+});
+
+// Initialize in background - don't block server startup
 (async () => {
   try {
-    console.log("🚀 Starting server initialization...");
-    
-    const server = await registerRoutes(app);
+    await registerRoutes(app, server);
     console.log("✅ Routes registered successfully");
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -62,26 +122,17 @@ app.use((req, res, next) => {
       console.log("✅ Static file serving configured");
     }
 
-    // ALWAYS serve the app on the port specified in the environment variable PORT
-    // Other ports are firewalled. Default to 5000 if not specified.
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    const port = parseInt(process.env.PORT || '5000', 10);
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`serving on port ${port}`);
-      console.log("✅ Server started successfully");
-    });
+    // Mark as ready
+    isReady = true;
+    console.log("✅ Server initialization complete - ready to serve requests");
   } catch (error) {
-    console.error("💥 FATAL: Server initialization failed:", error);
+    console.error("💥 Initialization failed:", error);
     console.error("Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       error
     });
-    process.exit(1);
+    initializationError = error instanceof Error ? error : new Error(String(error));
+    // Don't exit - keep server running to report unhealthy status
   }
 })();

@@ -57,7 +57,7 @@ export interface IStorage {
   createQuestion(question: InsertQuestion): Promise<Question>;
   getQuestionByValue(categoryId: string, value: number): Promise<QuestionWithCategory | undefined>;
   getRapidFireQuestions(limit?: number, categoryIds?: string[]): Promise<QuestionWithCategory[]>;
-  getAnsweredQuestions(userId?: string): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>;
+  getAnsweredQuestions(userId?: string, mode?: "game" | "rapid_fire" | "anytime_test"): Promise<{ questionId: string; assessment: "correct" | "incorrect" | "unsure" }[]>;
   clearProgress(userId?: string): Promise<void>;
   resetGameBoard(userId?: string): Promise<void>;
   
