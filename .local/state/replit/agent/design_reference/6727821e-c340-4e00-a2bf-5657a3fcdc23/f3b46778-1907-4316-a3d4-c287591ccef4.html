@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Training App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                borderRadius: {
+                    lg: "var(--radius)",
+                    md: "calc(var(--radius) - 2px)",
+                    sm: "calc(var(--radius) - 4px)",
+                },
+                colors: {
+                    background: "var(--background)",
+                    foreground: "var(--foreground)",
+                    card: {
+                        DEFAULT: "var(--card)",
+                        foreground: "var(--card-foreground)",
+                    },
+                    popover: {
+                        DEFAULT: "var(--popover)",
+                        foreground: "var(--popover-foreground)",
+                    },
+                    primary: {
+                        DEFAULT: "var(--primary)",
+                        foreground: "var(--primary-foreground)",
+                    },
+                    secondary: {
+                        DEFAULT: "var(--secondary)",
+                        foreground: "var(--secondary-foreground)",
+                    },
+                    muted: {
+                        DEFAULT: "var(--muted)",
+                        foreground: "var(--muted-foreground)",
+                    },
+                    accent: {
+                        DEFAULT: "var(--accent)",
+                        foreground: "var(--accent-foreground)",
+                    },
+                    destructive: {
+                        DEFAULT: "var(--destructive)",
+                        foreground: "var(--destructive-foreground)",
+                    },
+                    border: "var(--border)",
+                    input: "var(--input)",
+                    ring: "var(--ring)",
+                    chart: {
+                        "1": "var(--chart-1)",
+                        "2": "var(--chart-2)",
+                        "3": "var(--chart-3)",
+                        "4": "var(--chart-4)",
+                        "5": "var(--chart-5)",
+                    }
+                },
+                fontFamily: {
+                    sans: ["var(--font-sans)"],
+                    serif: ["var(--font-serif)"],
+                    mono: ["var(--font-mono)"],
+                }
+            },
+        }
+    };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --background: hsl(210 40% 98%);
+            --foreground: hsl(222 47% 11%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(222 47% 11%);
+            --popover: hsl(0 0% 100%);
+            --popover-foreground: hsl(222 47% 11%);
+            --primary: hsl(210 83% 53%);
+            --primary-foreground: hsl(0 0% 100%);
+            --secondary: hsl(45 93% 47%);
+            --secondary-foreground: hsl(222 47% 11%);
+            --muted: hsl(210 40% 96%);
+            --muted-foreground: hsl(215 16% 46%);
+            --accent: hsl(120 61% 50%);
+            --accent-foreground: hsl(0 0% 100%);
+            --destructive: hsl(0 84% 60%);
+            --destructive-foreground: hsl(0 0% 100%);
+            --border: hsl(214 32% 91%);
+            --input: hsl(214 32% 91%);
+            --ring: hsl(210 83% 53%);
+            --radius: 8px;
+            --font-sans: 'Roboto', system-ui, sans-serif;
+        }
+        
+        body {
+            font-family: var(--font-sans);
+        }
+        
+        .jeopardy-gradient {
+            background: linear-gradient(135deg, hsl(210 83% 53%) 0%, hsl(240 83% 45%) 100%);
+        }
+        
+        .gold-gradient {
+            background: linear-gradient(135deg, hsl(45 93% 47%) 0%, hsl(35 93% 55%) 100%);
+        }
+        
+        .question-card {
+            min-height: 280px;
+        }
+        
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .ripple:active:before {
+            width: 300px;
+            height: 300px;
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground font-sans">
+
+    <!-- @COMPONENT: MainApp [currentScreen state management] -->
+    <div class="min-h-screen bg-background">
+        
+        <!-- Header -->
+        <!-- @COMPONENT: AppHeader [user stats, settings] -->
+        <header class="jeopardy-gradient text-primary-foreground shadow-lg">
+            <div class="px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-trophy text-secondary text-2xl"></i>
+                        <div>
+                            <h1 class="text-lg font-bold">Jeopardy Trainer</h1>
+                            <p class="text-sm text-primary-foreground/80">Level 12 • 847 pts</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-right">
+                            <div class="text-sm text-primary-foreground/80">Daily Streak</div>
+                            <div class="text-lg font-bold text-secondary">23</div>
+                        </div>
+                        <button class="p-2 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+                            <i class="fas fa-cog text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <!-- @END_COMPONENT: AppHeader -->
+
+        <!-- Main Content Area -->
+        <main class="pb-20">
+            
+            <!-- Game Board View -->
+            <!-- @COMPONENT: GameBoard [categories, questions, selectedCategory state] -->
+            <section class="p-4" id="game-board">
+                <div class="mb-4">
+                    <h2 class="text-xl font-bold mb-2">Today's Challenge</h2>
+                    <div class="bg-card rounded-lg p-4 shadow-sm border border-border">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-muted-foreground">Progress Today</span>
+                            <span class="text-sm font-medium">24/30 questions</span>
+                        </div>
+                        <div class="w-full bg-muted rounded-full h-2">
+                            <div class="bg-primary h-2 rounded-full transition-all duration-500" style="width: 80%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Grid -->
+                <div class="grid grid-cols-1 gap-4 mb-6">
+                    <!-- @MAP: categories.map(category => ( -->
+                    <div class="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+                        <div class="bg-primary text-primary-foreground p-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-sm uppercase">World History</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-primary-foreground/20 px-2 py-1 rounded text-xs">
+                                        High Priority
+                                    </span>
+                                    <span class="text-xs text-primary-foreground/80">75% accuracy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1 p-3">
+                            <!-- @MAP: values.map(value => ( -->
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center" data-event="click:selectQuestion" data-implementation="Should load question based on category and value">
+                                $200
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $400
+                            </button>
+                            <button class="ripple bg-muted text-muted-foreground p-3 rounded font-bold text-sm cursor-not-allowed min-h-[60px] flex items-center justify-center" disabled>
+                                $600
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $800
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $1000
+                            </button>
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+
+                    <div class="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+                        <div class="bg-primary text-primary-foreground p-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-sm uppercase">Science & Nature</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-accent/20 px-2 py-1 rounded text-xs">
+                                        Improving
+                                    </span>
+                                    <span class="text-xs text-primary-foreground/80">68% accuracy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1 p-3">
+                            <button class="ripple bg-muted text-muted-foreground p-3 rounded font-bold text-sm cursor-not-allowed min-h-[60px] flex items-center justify-center" disabled>
+                                $200
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $400
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $600
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $800
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $1000
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+                        <div class="bg-primary text-primary-foreground p-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-bold text-sm uppercase">Literature</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-destructive/20 px-2 py-1 rounded text-xs">
+                                        Needs Work
+                                    </span>
+                                    <span class="text-xs text-primary-foreground/80">42% accuracy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1 p-3">
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $200
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $400
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $600
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $800
+                            </button>
+                            <button class="ripple bg-secondary text-secondary-foreground p-3 rounded font-bold text-sm hover:bg-secondary/90 transition-colors min-h-[60px] flex items-center justify-center">
+                                $1000
+                            </button>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+
+                <!-- Quick Study Mode -->
+                <div class="bg-card rounded-lg p-4 shadow-sm border border-border">
+                    <h3 class="font-bold mb-3">Quick Study</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button class="bg-accent text-accent-foreground p-4 rounded-lg font-medium hover:bg-accent/90 transition-colors" data-event="click:startQuickStudy">
+                            <i class="fas fa-clock mb-2 block text-lg"></i>
+                            Spaced Repetition
+                        </button>
+                        <button class="bg-primary text-primary-foreground p-4 rounded-lg font-medium hover:bg-primary/90 transition-colors" data-event="click:startWeakAreas">
+                            <i class="fas fa-target mb-2 block text-lg"></i>
+                            Weak Areas
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <!-- @END_COMPONENT: GameBoard -->
+
+            <!-- Question View (Hidden by default) -->
+            <!-- @COMPONENT: QuestionView [currentQuestion, userAnswer, showAnswer state] -->
+            <section class="p-4 hidden" id="question-view">
+                <div class="mb-4">
+                    <div class="flex items-center justify-between text-sm text-muted-foreground mb-2">
+                        <span>World History • $600</span>
+                        <span>Question 5/30</span>
+                    </div>
+                    <div class="w-full bg-muted rounded-full h-1">
+                        <div class="bg-primary h-1 rounded-full" style="width: 17%"></div>
+                    </div>
+                </div>
+
+                <div class="question-card bg-card rounded-lg p-6 shadow-sm border border-border mb-6 flex items-center justify-center">
+                    <div class="text-center">
+                        <p class="text-lg leading-relaxed mb-4" data-bind="question.text" data-mock="true">
+                            This French emperor was exiled to the island of Elba in 1814, only to return for the famous "Hundred Days" before his final defeat at Waterloo.
+                        </p>
+                        <div class="text-sm text-muted-foreground">
+                            <i class="fas fa-clock mr-1"></i>
+                            <span data-bind="timeRemaining" data-mock="true">0:28</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Answer Input -->
+                <div class="bg-card rounded-lg p-4 shadow-sm border border-border mb-6">
+                    <label class="block text-sm font-medium mb-2">Your Answer (in question form)</label>
+                    <input type="text" placeholder="Who is..." class="w-full p-3 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring" data-implementation="Should validate Jeopardy answer format">
+                    <div class="mt-3 flex space-x-3">
+                        <button class="flex-1 bg-accent text-accent-foreground py-3 px-4 rounded-lg font-medium hover:bg-accent/90 transition-colors ripple" data-event="click:submitAnswer">
+                            <i class="fas fa-check mr-2"></i>
+                            Submit Answer
+                        </button>
+                        <button class="flex-1 bg-muted text-muted-foreground py-3 px-4 rounded-lg font-medium hover:bg-muted/80 transition-colors" data-event="click:skipQuestion">
+                            <i class="fas fa-forward mr-2"></i>
+                            Skip
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hint Section -->
+                <div class="bg-card rounded-lg p-4 shadow-sm border border-border">
+                    <button class="w-full flex items-center justify-between text-left text-muted-foreground hover:text-foreground transition-colors" data-event="click:toggleHint">
+                        <span class="font-medium">Need a hint?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="mt-3 text-sm text-muted-foreground hidden" data-implementation="Toggle visibility based on hint state">
+                        This person's first name starts with 'N' and they were born in Corsica.
+                    </div>
+                </div>
+            </section>
+            <!-- @END_COMPONENT: QuestionView -->
+
+            <!-- Statistics Dashboard -->
+            <!-- @COMPONENT: StatsDashboard [stats, charts, performance data] -->
+            <section class="p-4 hidden" id="stats-view">
+                <h2 class="text-xl font-bold mb-4">Performance Analytics</h2>
+                
+                <!-- Overall Stats -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-card rounded-lg p-4 shadow-sm border border-border text-center">
+                        <div class="text-2xl font-bold text-primary" data-bind="stats.totalQuestions">1,247</div>
+                        <div class="text-sm text-muted-foreground">Questions Answered</div>
+                    </div>
+                    <div class="bg-card rounded-lg p-4 shadow-sm border border-border text-center">
+                        <div class="text-2xl font-bold text-accent" data-bind="stats.overallAccuracy">73%</div>
+                        <div class="text-sm text-muted-foreground">Overall Accuracy</div>
+                    </div>
+                    <div class="bg-card rounded-lg p-4 shadow-sm border border-border text-center">
+                        <div class="text-2xl font-bold text-secondary" data-bind="stats.currentStreak">23</div>
+                        <div class="text-sm text-muted-foreground">Current Streak</div>
+                    </div>
+                    <div class="bg-card rounded-lg p-4 shadow-sm border border-border text-center">
+                        <div class="text-2xl font-bold text-primary" data-bind="stats.studyTime">47h</div>
+                        <div class="text-sm text-muted-foreground">Study Time</div>
+                    </div>
+                </div>
+
+                <!-- Category Performance -->
+                <div class="bg-card rounded-lg p-4 shadow-sm border border-border mb-6">
+                    <h3 class="font-bold mb-4">Category Performance</h3>
+                    <!-- @MAP: categoryStats.map(category => ( -->
+                    <div class="mb-4 last:mb-0">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium" data-bind="category.name">World History</span>
+                            <span class="text-sm text-muted-foreground" data-bind="category.accuracy">75%</span>
+                        </div>
+                        <div class="w-full bg-muted rounded-full h-2">
+                            <div class="bg-primary h-2 rounded-full transition-all duration-500" style="width: 75%"></div>
+                        </div>
+                        <div class="text-xs text-muted-foreground mt-1" data-bind="category.questionsAnswered">186 questions</div>
+                    </div>
+                    <div class="mb-4 last:mb-0">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">Science & Nature</span>
+                            <span class="text-sm text-muted-foreground">68%</span>
+                        </div>
+                        <div class="w-full bg-muted rounded-full h-2">
+                            <div class="bg-accent h-2 rounded-full transition-all duration-500" style="width: 68%"></div>
+                        </div>
+                        <div class="text-xs text-muted-foreground mt-1">142 questions</div>
+                    </div>
+                    <div class="mb-4 last:mb-0">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">Literature</span>
+                            <span class="text-sm text-muted-foreground">42%</span>
+                        </div>
+                        <div class="w-full bg-muted rounded-full h-2">
+                            <div class="bg-destructive h-2 rounded-full transition-all duration-500" style="width: 42%"></div>
+                        </div>
+                        <div class="text-xs text-muted-foreground mt-1">89 questions</div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+
+                <!-- Learning Progress Chart -->
+                <div class="bg-card rounded-lg p-4 shadow-sm border border-border mb-6">
+                    <h3 class="font-bold mb-4">7-Day Progress</h3>
+                    <div class="h-32 flex items-end space-x-2" data-implementation="Replace with actual chart library like Chart.js">
+                        <!-- Mock chart bars -->
+                        <div class="flex-1 bg-muted rounded-t" style="height: 40%"></div>
+                        <div class="flex-1 bg-primary rounded-t" style="height: 60%"></div>
+                        <div class="flex-1 bg-primary rounded-t" style="height: 80%"></div>
+                        <div class="flex-1 bg-primary rounded-t" style="height: 70%"></div>
+                        <div class="flex-1 bg-primary rounded-t" style="height: 85%"></div>
+                        <div class="flex-1 bg-primary rounded-t" style="height: 90%"></div>
+                        <div class="flex-1 bg-accent rounded-t" style="height: 100%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-muted-foreground mt-2">
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                        <span>Sun</span>
+                    </div>
+                </div>
+
+                <!-- Spaced Repetition Status -->
+                <div class="bg-card rounded-lg p-4 shadow-sm border border-border">
+                    <h3 class="font-bold mb-4">Spaced Repetition Queue</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">Due Today</span>
+                            <span class="bg-destructive text-destructive-foreground px-2 py-1 rounded text-xs font-medium">47</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">Due Tomorrow</span>
+                            <span class="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs font-medium">23</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">This Week</span>
+                            <span class="bg-muted text-muted-foreground px-2 py-1 rounded text-xs font-medium">156</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- @END_COMPONENT: StatsDashboard -->
+
+        </main>
+
+        <!-- Bottom Navigation -->
+        <!-- @COMPONENT: BottomNavigation [currentTab state] -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-card border-t border-border shadow-lg">
+            <div class="flex">
+                <button class="flex-1 py-3 px-2 text-center hover:bg-muted transition-colors" data-event="click:showGameBoard" data-implementation="Should update currentScreen state">
+                    <i class="fas fa-th-large text-xl text-primary block"></i>
+                    <span class="text-xs text-primary font-medium">Game</span>
+                </button>
+                <button class="flex-1 py-3 px-2 text-center hover:bg-muted transition-colors" data-event="click:showStudyMode">
+                    <i class="fas fa-brain text-xl text-muted-foreground block"></i>
+                    <span class="text-xs text-muted-foreground">Study</span>
+                </button>
+                <button class="flex-1 py-3 px-2 text-center hover:bg-muted transition-colors" data-event="click:showStats">
+                    <i class="fas fa-chart-bar text-xl text-muted-foreground block"></i>
+                    <span class="text-xs text-muted-foreground">Stats</span>
+                </button>
+                <button class="flex-1 py-3 px-2 text-center hover:bg-muted transition-colors" data-event="click:showProfile">
+                    <i class="fas fa-user text-xl text-muted-foreground block"></i>
+                    <span class="text-xs text-muted-foreground">Profile</span>
+                </button>
+            </div>
+        </nav>
+        <!-- @END_COMPONENT: BottomNavigation -->
+
+    </div>
+    <!-- @END_COMPONENT: MainApp -->
+
+    <!-- Success/Feedback Modal -->
+    <!-- @COMPONENT: FeedbackModal [isVisible, feedback type, question result] -->
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 hidden" id="feedback-modal" data-implementation="Show/hide based on answer submission">
+        <div class="bg-card rounded-lg p-6 max-w-sm w-full shadow-xl">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check text-2xl text-accent-foreground"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2">Correct!</h3>
+                <p class="text-muted-foreground mb-4">You earned $600</p>
+                <div class="text-sm text-muted-foreground mb-4">
+                    <strong>Answer:</strong> Who is Napoleon Bonaparte?
+                </div>
+                <button class="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors" data-event="click:nextQuestion">
+                    Next Question
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: FeedbackModal -->
+
+    <script>
+        // TODO: Implement state management, navigation, spaced repetition algorithm
+        // TODO: Implement question loading from database
+        // TODO: Implement answer validation and scoring
+        // TODO: Implement local storage for progress persistence
+        // TODO: Implement performance analytics and chart rendering
+        
+        // Simple navigation demo
+        (() => {
+            const gameBoard = document.getElementById('game-board');
+            const questionView = document.getElementById('question-view');
+            const statsView = document.getElementById('stats-view');
+            const navButtons = document.querySelectorAll('nav button');
+            
+            // Mock navigation functionality
+            navButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    // Remove active states
+                    navButtons.forEach(btn => {
+                        const icon = btn.querySelector('i');
+                        const text = btn.querySelector('span');
+                        icon.className = icon.className.replace('text-primary', 'text-muted-foreground');
+                        text.className = text.className.replace('text-primary font-medium', 'text-muted-foreground');
+                    });
+                    
+                    // Add active state to clicked button
+                    const icon = button.querySelector('i');
+                    const text = button.querySelector('span');
+                    icon.className = icon.className.replace('text-muted-foreground', 'text-primary');
+                    text.className = text.className.replace('text-muted-foreground', 'text-primary font-medium');
+                });
+            });
+        })();
+    </script>
+
+</body>
+</html>
